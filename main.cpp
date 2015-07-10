@@ -9,7 +9,6 @@
 
 void openCV() {
     int exitCODE;
-
     exitCODE = make_detection_transactions();
     if (exitCODE == -1)
       exit(2);
@@ -17,6 +16,7 @@ void openCV() {
 
 void communication(){
    // const char *c = get_HTTP_request("./data");
+    int code =  save_settings_to_var();
 
     //printf("Cislo :%d\n", cislo);
 
@@ -27,8 +27,7 @@ void communication(){
 
 
 int main(){
-    int code =  save_settings_to_var();
-    printf("exit: \n");
+
     std::thread first (openCV);     // spawn new thread that calls foo()
     std::thread second (communication);  // spawn new thread that calls bar(0)
 

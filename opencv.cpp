@@ -15,7 +15,7 @@ int frame_height = 720;
 
 int make_detection_transactions(){
 
-    Ptr<BackgroundSubtractorMOG2> pMOG2; //MOG2 Background subtractor.
+    Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 
 
     int id = 0;
@@ -28,9 +28,11 @@ int make_detection_transactions(){
 
     vector<kalmanCont> KalObjects;
 
-    pMOG2 = createBackgroundSubtractorMOG2(learning_history, thresholding, true);
-    pMOG2->setShadowThreshold(shadow_thresh);
-    pMOG2->setShadowValue(0);
+    pKNN = createBackgroundSubtractorKNN();
+    pKNN->setShadowThreshold(shadow_thresh);
+    pKNN->setDetectShadows(true);
+    pKNN->setDist2Threshold(3000);
+    pKNN->setShadowValue(0);
     cv::VideoCapture cap;
 
     if (!cap.open("/home/andrej/Music/vdeo4.avi")) {
@@ -49,7 +51,7 @@ int make_detection_transactions(){
         cv::Mat res;
         frame.copyTo(res);
         cv::Mat rangeRes;
-        pMOG2->apply(frame, rangeRes);
+        pKNN->apply(frame, rangeRes);
 
         cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 8);
         cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 18);

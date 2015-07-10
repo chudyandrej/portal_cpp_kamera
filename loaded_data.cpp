@@ -19,10 +19,8 @@ int save_settings_to_var() {
     if (data_from_file != NULL && data_from_http != NULL) {
         std::string str1(data_from_file);
         std::string str2(data_from_http);
-        std::cout << str1 << std::endl;
-        std::cout << str2 << std::endl;
-
-
+       // std::cout << str1 << std::endl;
+       // std::cout << str2 << std::endl;
          if (str_hash(str1) != str_hash(str2)) {
             write_settings_to_file("data", data_from_http);
             free((char *) data_from_http);
@@ -37,9 +35,6 @@ int save_settings_to_var() {
         free((char *) data_from_file);
         return -1;
     }
-
-
-
 }
 
 char *load_settings(){
@@ -87,7 +82,6 @@ char *load_settings_from_file(const char *url){
     data.open( url, std::ofstream::out );
     data.write( (char*)newConfiguration, (int) strlen(newConfiguration) );
     data.close();
-
 }
 
 
