@@ -2,6 +2,7 @@
 // Created by andrej on 29.6.2015.
 //
 
+
 #include "kalmanCont.h"
 
 kalmanCont::kalmanCont(float lastY) : lastY(lastY) {

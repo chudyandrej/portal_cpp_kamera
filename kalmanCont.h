@@ -5,16 +5,10 @@
 #ifndef PORTALS_KALMANCONT_H
 #define PORTALS_KALMANCONT_H
 
-#include <opencv2/core/core.hpp>
-#include "opencv2/imgcodecs.hpp"
-#include <opencv2/highgui/highgui.hpp>
-#include <opencv2/imgproc/imgproc.hpp>
-#include <opencv2/video.hpp>
+#include <opencv2/video/tracking.hpp>
 #include <iostream>
-#include <profile.h>
 
-using namespace cv;
-using namespace std;
+
 
 class kalmanCont {
 
