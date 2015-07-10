@@ -35,7 +35,7 @@ int make_detection_transactions(){
     pKNN->setShadowValue(0);
     cv::VideoCapture cap;
 
-    if (!cap.open("/home/andrej/Music/vdeo4.avi")) {
+    if (!cap.open(0)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -53,8 +53,8 @@ int make_detection_transactions(){
         cv::Mat rangeRes;
         pKNN->apply(frame, rangeRes);
 
-        cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 8);
-        cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 18);
+        cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 1);
+        cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
 
         cv::imshow("Threshold", rangeRes);
         //  line( res, Point( 0, 200 ), Point( 1280, 200), Scalar( 110, 220, 0 ),  2, 8 );
@@ -126,8 +126,8 @@ int make_detection_transactions(){
                     KalObjects.erase(KalObjects.begin() + i);
 
 
-                if (KalObjects[i].get_counter() > 10) {
-                    if (!(KalObjects[i].get_centerY() > frame_height - 150 || KalObjects[i].get_centerY() < 150)) {
+                if (KalObjects[i].get_counter() > 25) {
+                    if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 8 || KalObjects[i].get_centerY() < frame_height / 8)) {
                         cv::Rect objectsBoxKalman;
                         KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true);
                     }
@@ -172,14 +172,14 @@ int make_detection_transactions(){
         stringstream ss;
         ss << out;
         string counter = ss.str();
-        putText(res, counter.c_str(), cv::Point(100, 150), FONT_HERSHEY_SCRIPT_SIMPLEX, 4, cv::Scalar(0, 255, 0),
-                5);
+        putText(res, counter.c_str(), cv::Point(20, 10), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0),
+                1);
 
         stringstream ss2;
         ss2 << in;
         string counter2 = ss2.str();
-        putText(res, counter2.c_str(), cv::Point(100, 600), FONT_HERSHEY_SCRIPT_SIMPLEX, 4, cv::Scalar(0, 0, 255),
-                5);
+        putText(res, counter2.c_str(), cv::Point(5, 150), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255),
+                1);
 
         cv::imshow("Tracking", res);
 
@@ -217,7 +217,6 @@ int parsingContours(vector<kalmanCont>& KalObjects, int x,int y,  double max) {
         }
     }
 
-    printf("vzdialenost: %f %d\n",  distance,r);
 
     return  r;
 }

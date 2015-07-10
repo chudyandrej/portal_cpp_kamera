@@ -1,7 +1,5 @@
-cmake_minimum_required(VERSION 3.2)
 project(portals)
 find_package( OpenCV REQUIRED )
-set(CMAKE_RUNTIME_OUTPUT_DIRECTORY "/home/andrej/ClionProjects/portals")
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
 
 set(SOURCE_FILES main.cpp)
