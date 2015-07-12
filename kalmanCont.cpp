@@ -4,6 +4,7 @@
 
 
 #include "kalmanCont.h"
+#include "loaded_data.h"
 
 kalmanCont::kalmanCont(float lastY) : lastY(lastY) {
 
@@ -38,24 +39,24 @@ kalmanCont::kalmanCont(float lastY) : lastY(lastY) {
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 }
 
-void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool Kalman_object) {
+void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments mu, bool Kalman_object) {
 
     objectsBoxCopy = objectsBox;
 
     if (!Kalman_object) {
         usingRATE = 0;
-        lastX = objectsBox.x + objectsBox.width / 2;
-        lastY = objectsBox.y + objectsBox.height / 2;
-        meas.at<float>(0) = objectsBox.x + objectsBox.width / 2;                      //center x
-        meas.at<float>(1) =  objectsBox.y + objectsBox.height / 2;                   //center y
+        lastX = (int) (mu.m10/mu.m00);
+        lastY = (int) (mu.m01/mu.m00);
+        meas.at<float>(0) =(int) (mu.m10/mu.m00);                      //center x
+        meas.at<float>(1) =  (int) (mu.m01/mu.m00);                  //center y
         meas.at<float>(2) = (float) objectsBox.width;                   //dlzka
         meas.at<float>(3) = (float) objectsBox.height;                  //vyska
     }
     else {
         meas.at<float>(0) = x;                                          //center x
         meas.at<float>(1) = y;                                          //center y
-        meas.at<float>(2) = 300;                   //dlzka
-        meas.at<float>(3) = 300;                  //vyska
+        meas.at<float>(2) = 50;                   //dlzka
+        meas.at<float>(3) = 50;                  //vyska
     }
 
     if (!found){
@@ -94,12 +95,12 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool Kalma
 
     if (center.x <= 0)
         center.x = 0;
-    if (center.x >= 1280)
-        center.x = 1280;
+    if (center.x >= frame_width)
+        center.x = frame_width;
     if (center.y <= 0)
         center.y = 0;
-    if (center.y >= 720)
-        center.y = 720;
+    if (center.y >= frame_height)
+        center.y = frame_height;
 
 
 

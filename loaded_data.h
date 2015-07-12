@@ -9,10 +9,14 @@
 #include <string.h>
 #include <malloc.h>
 
-int save_settings_to_var();
+void save_settings_to_var();
 char *load_settings();
 char *load_settings_from_file(const char *url);
 void write_settings_to_file(const char *url, const char *newConfiguration);
+
+int get_int_json( const char *text, const char *key);
+double get_double_json( const char *text, const char *key);
+const char *create_json(const char *direction, int tag, int raspiId);
 
 extern int learning_history;
 extern int thresholding ;

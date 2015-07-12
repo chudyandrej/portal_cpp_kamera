@@ -8,37 +8,41 @@
 #include "opencv.h"
 
 
-
-int save_settings_to_var() {
+void save_settings_to_var() {
     std::hash<std::string> str_hash;
      const char *data_from_http;
      const char *data_from_file;
+
     data_from_file = load_settings();
 
     data_from_http = get_HTTP_request("http://apis-portals.herokuapp.com/api/portal_endpoint/settings/1");
     if (data_from_file != NULL && data_from_http != NULL) {
         std::string str1(data_from_file);
         std::string str2(data_from_http);
-       // std::cout << str1 << std::endl;
-       // std::cout << str2 << std::endl;
-         if (str_hash(str1) != str_hash(str2)) {
-            write_settings_to_file("data", data_from_http);
+
+        if (str_hash(str1) != str_hash(str2)) {
+            printf("Inconsistent data, enrollment\n");
+            write_settings_to_file("/home/andrej/ClionProjects/portals/data.log", data_from_http);
             free((char *) data_from_http);
             free((char *) data_from_file);
             data_from_file = load_settings();
             free((char *) data_from_file);
         }
-        return 0;
+        printf("Data has been successfully loaded!\n");
     }
     else{
         free((char *) data_from_http);
         free((char *) data_from_file);
-        return -1;
+        if (data_from_file != NULL)
+            printf("Server not a reachable. Program using variable from file.\n");
+        else
+        fprintf(stderr,"Loading data was unsuccessful! Program using default values.\n");
     }
 }
 
 char *load_settings(){
-    char *data_from_file =load_settings_from_file("data");
+    char *data_from_file =load_settings_from_file("/home/andrej/ClionProjects/portals/data.log");
+
     if(data_from_file != NULL) {
         learning_history = get_int_json(data_from_file, "learning_history");
         thresholding = get_int_json(data_from_file, "thresholding");
@@ -50,22 +54,23 @@ char *load_settings(){
         shadow_thresh = get_double_json(data_from_file,"shadow_thresh");
         return data_from_file;
     }
-    return NULL;
+    else
+        return NULL;
 }
 
 
 char *load_settings_from_file(const char *url){
     FILE * pFile;
-    char file_content [201];
+    char file_content [200];
     char *pointer_to_space;
-    pFile = fopen (url , "r");
-    if (pFile == NULL) {
-        fprintf( stderr, "Error opening file!\n" );
+
+    if ((pFile = fopen (url , "r")) == NULL) {
+        fprintf( stderr, "Error opening file whit URL: %s!\n",url);
         return NULL;
     }
     else {
-        if ( fgets (file_content , 200 , pFile) == NULL ){
-            fprintf( stderr, "Error reading file!\n" );
+        if (fgets (file_content , 200 , pFile) == NULL ){
+            fprintf( stderr, "Error reading file! whit UTL: %s\n",url);
             return NULL;
         }
        // puts (file_content);
@@ -76,13 +81,52 @@ char *load_settings_from_file(const char *url){
     return pointer_to_space;
 }
 
-
-  void write_settings_to_file(const char *url, const char *newConfiguration){
+void write_settings_to_file(const char *url, const char *newConfiguration){
     ofstream data;
     data.open( url, std::ofstream::out );
     data.write( (char*)newConfiguration, (int) strlen(newConfiguration) );
     data.close();
 }
 
+int get_int_json( const char *text, const char *key){
+    cJSON *json;
+    json=cJSON_Parse(text);
+    if (!json) {
+        printf("Error before: [%s]\n", cJSON_GetErrorPtr());
+        return -1;
+    }
+    else{
+        int format = cJSON_GetObjectItem(json,key)->valueint;
+        cJSON_Delete(json);
+        return format;
+    }
+}
 
+double get_double_json( const char *text, const char *key){
+    cJSON *json;
+    json=cJSON_Parse(text);
+    if (!json) {
+        printf("Error before: [%s]\n", cJSON_GetErrorPtr());
+        return -1;
+    }
+    else{
+        double format = cJSON_GetObjectItem(json,key)->valuedouble;
+        cJSON_Delete(json);
+        return format;
+    }
+}
 
+const char *create_json(const char *direction, int tag, int raspiId){
+    char *results;
+    char *test;
+    cJSON *root;
+
+    root = cJSON_CreateObject();
+    cJSON_AddItemToObject(root, "direction", cJSON_CreateString(direction));
+    cJSON_AddNumberToObject(root, "tagId", tag);
+    cJSON_AddNumberToObject(root, "raspiId", raspiId);
+    test = cJSON_Print(root);
+    results = (char*) malloc(sizeof(char) * strlen(test));
+    strcpy (results,test);
+    return results;
+}

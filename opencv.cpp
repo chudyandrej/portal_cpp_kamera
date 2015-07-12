@@ -3,14 +3,15 @@
 //
 
 #include "opencv.h"
+
 int learning_history = 1000;
 int thresholding = 80;
-int min_area = 40000;
-int min_dist_to_create = 400;
-double max_dist_to_pars = 250;
-double shadow_thresh = 0.5;
-int frame_width = 1280;
-int frame_height = 720;
+int min_area = 2300;
+int min_dist_to_create = 100;
+double max_dist_to_pars = 70;
+double shadow_thresh = 0.7;
+int frame_width = 320;
+int frame_height = 240;
 
 
 int make_detection_transactions(){
@@ -31,11 +32,12 @@ int make_detection_transactions(){
     pKNN = createBackgroundSubtractorKNN();
     pKNN->setShadowThreshold(shadow_thresh);
     pKNN->setDetectShadows(true);
-    pKNN->setDist2Threshold(3000);
+    pKNN->setDist2Threshold(2700);
+    pKNN->setHistory(learning_history);
     pKNN->setShadowValue(0);
     cv::VideoCapture cap;
 
-    if (!cap.open(0)) {
+    if (!cap.open("/home/andrej/Music/video2/pi_video2.mkv")) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -53,8 +55,8 @@ int make_detection_transactions(){
         cv::Mat rangeRes;
         pKNN->apply(frame, rangeRes);
 
-        cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 1);
-        cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 2);
+        cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 5);
+        cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 8);
 
         cv::imshow("Threshold", rangeRes);
         //  line( res, Point( 0, 200 ), Point( 1280, 200), Scalar( 110, 220, 0 ),  2, 8 );
@@ -65,36 +67,37 @@ int make_detection_transactions(){
         // >>>>> Filtering
         vector<vector<cv::Point> > objects;
         vector<cv::Rect> objectsBox;
-
+        vector<cv::Moments> mus;
 
         for (size_t i = 0; i < contours.size(); i++) {
             cv::Rect bBox;
+            cv::Moments mu;
             bBox = cv::boundingRect(contours[i]);
-
+            mu = moments( contours[i], false );
 
             // Searching for a bBox almost square
             if (bBox.area() >= min_area) {
                 objects.push_back(contours[i]);
                 objectsBox.push_back(bBox);
-
+                mus.push_back(mu);
             }
         }
 
         for (size_t i = 0; i < objects.size(); i++) {
 
-            int x = objectsBox[i].x + objectsBox[i].width / 2;
-            int y = objectsBox[i].y + objectsBox[i].height / 2;
+            int x = (int) (mus[i].m10/mus[i].m00);
+            int y = (int) (mus[i].m01/mus[i].m00);
 
 
             int index_object = parsingContours(KalObjects, x, y,max_dist_to_pars);
 
             if (index_object == -1) {
                 bool create = true;
-                int min = min_dist_to_create;
+
                 for (size_t k = 0; k < KalObjects.size(); k++) {
-                    double distance = CalcDistance(x, KalObjects[k].getKalmanXpos(), y, KalObjects[k].getKalmanYpos());
+                    double distance = CalcDistance(x, KalObjects[k].get_centerX(), y, KalObjects[k].get_centerY());
                     //printf("Idem %f\n", distance);
-                    if (min > distance) {
+                    if (min_dist_to_create > distance) {
                         create = false;
                     }
                 }
@@ -104,14 +107,14 @@ int make_detection_transactions(){
                     newObject.set_startingYpos(y);
                     id++;
                     id = (id > 10) ? 0 : id;
-                    newObject.kalmanMakeCalculate(res, objectsBox[i], false);
+                    newObject.kalmanMakeCalculate(res, objectsBox[i],mus[i], false);
                     KalObjects.push_back(newObject);
 
                 }
 
             }
             else {
-                KalObjects[index_object].kalmanMakeCalculate(res, objectsBox[i], false);
+                KalObjects[index_object].kalmanMakeCalculate(res, objectsBox[i],mus[i], false);
 
             }
         }
@@ -122,14 +125,15 @@ int make_detection_transactions(){
             KalObjects[i].set_addCounture(false);
 
             if (KalObjects[i].get_usingRate() > 1) {
-                if (KalObjects[i].get_counter() < 5)
+                if (KalObjects[i].get_counter() < 3)
                     KalObjects.erase(KalObjects.begin() + i);
 
 
-                if (KalObjects[i].get_counter() > 25) {
-                    if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 8 || KalObjects[i].get_centerY() < frame_height / 8)) {
+                else {
+                    if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 7 || KalObjects[i].get_centerY() < frame_height / 7)) {
                         cv::Rect objectsBoxKalman;
-                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true);
+                        cv::Moments mu;
+                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman,mu, true);
                     }
                     else {
                         if ((direction = (int) (KalObjects[i].get_startingYpos() - KalObjects[i].get_centerY())) < 0) {
@@ -140,11 +144,12 @@ int make_detection_transactions(){
                             if (abs(direction) > frame_height / 2)
                                 out++;
                         }
+                        printf("Objekt konci : %d    %d    %f\n",direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                         KalObjects.erase(KalObjects.begin() + i);
 
                     }
                 }
-                if (KalObjects[i].get_usingRate() > 20) {
+                if (KalObjects[i].get_usingRate() > 30) {
                     if ((direction = (int) (KalObjects[i].get_startingYpos() - KalObjects[i].get_centerY())) < 0) {
                         if (abs(direction) > frame_height / 2)
                             in++;
@@ -153,6 +158,7 @@ int make_detection_transactions(){
                         if (abs(direction) > frame_height / 2)
                             out++;
                     }
+                    printf("Objekt konci casim: %d    %d    %f\n",direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                     KalObjects.erase(KalObjects.begin() + i);
                 }
             }
@@ -172,19 +178,20 @@ int make_detection_transactions(){
         stringstream ss;
         ss << out;
         string counter = ss.str();
-        putText(res, counter.c_str(), cv::Point(20, 10), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0),
+        putText(res, counter.c_str(), cv::Point(5, 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0),
                 1);
 
         stringstream ss2;
         ss2 << in;
         string counter2 = ss2.str();
-        putText(res, counter2.c_str(), cv::Point(5, 150), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255),
+        putText(res, counter2.c_str(), cv::Point(5, 220), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255),
                 1);
 
         cv::imshow("Tracking", res);
 
         if (waitKey(1) == 27){ //wait for 'esc' key press for 30ms. If 'esc' key is pressed, break loop
             cout << "esc key is pressed by user" << endl;
+
             break;
         }
 
@@ -198,7 +205,7 @@ int parsingContours(vector<kalmanCont>& KalObjects, int x,int y,  double max) {
     for (size_t i = 0; i <KalObjects.size() ; i++) {
         distance = CalcDistance(x,KalObjects[i].getKalmanXpos(),y, KalObjects[i].getKalmanYpos());
 
-        if (max > distance && !(KalObjects[i].get_addCounture())) {
+        if (max > distance && !(KalObjects[i].get_addCounture() && KalObjects[i].get_counter() > 3)) {
             max = distance;
             r = (int)i;
             KalObjects[i].set_addCounture(true);

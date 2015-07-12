@@ -5,34 +5,7 @@
 #include <string.h>
 #include "communication.h"
 
-int get_int_json( const char *text, const char *key){
-    cJSON *json;
-   // printf("%s",text);
-    json=cJSON_Parse(text);
-    if (!json) {
-        printf("Error before: [%s]\n", cJSON_GetErrorPtr());
-        return -1;
-    }
-    else{
-        int format = cJSON_GetObjectItem(json,key)->valueint;
-        cJSON_Delete(json);
-        return format;
-    }
-}
-double get_double_json( const char *text, const char *key){
-    cJSON *json;
-   // printf("%s",text);
-    json=cJSON_Parse(text);
-    if (!json) {
-        printf("Error before: [%s]\n", cJSON_GetErrorPtr());
-        return -1;
-    }
-    else{
-        double format = cJSON_GetObjectItem(json,key)->valuedouble;
-        cJSON_Delete(json);
-        return format;
-    }
-}
+using namespace std;
 
 const char *get_HTTP_request(const char *url){
     const char *point_to_content;
@@ -56,20 +29,7 @@ const char *get_HTTP_request(const char *url){
     return  malloc_space;
 }
 
-const char *create_json(const char *direction, int tag, int raspiId){
-    char *results;
-    char *test;
-    cJSON *root;
 
-    root = cJSON_CreateObject();
-    cJSON_AddItemToObject(root, "direction", cJSON_CreateString(direction));
-    cJSON_AddNumberToObject(root, "tagId", tag);
-    cJSON_AddNumberToObject(root, "raspiId", raspiId);
-    test = cJSON_Print(root);
-    results = (char*) malloc(sizeof(char) * strlen(test));
-    strcpy (results,test);
-    return results;
-}
 
 void post_HTTP_request(const char *url ,const char *json, int length ){
     try {
@@ -81,12 +41,17 @@ void post_HTTP_request(const char *url ,const char *json, int length ){
         request.setOpt(new curlpp::options::HttpHeader(header));
         request.setOpt(new curlpp::options::PostFields(json));
         request.setOpt(new curlpp::options::PostFieldSize(length));
-        request.perform();
+
+        std::cout.setstate(std::ios::failbit) ;
+        request.perform();                     // <-- call
+        std::cout.clear() ;
+
     }
     catch ( curlpp::LogicError & e ) {
-
+            printf("\nerror1\n");
     }
     catch ( curlpp::RuntimeError & e ) {
-
+        printf("\nerror2\n");
     }
+
 }

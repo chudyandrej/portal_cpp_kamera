@@ -16,7 +16,7 @@ public:
 
     kalmanCont(float lastY);
 
-    void kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox ,bool Kalman_object);
+    void kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,cv::Moments mu ,bool Kalman_object);
 
 
     void add_usingRate();

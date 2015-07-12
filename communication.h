@@ -19,11 +19,6 @@ using namespace curlpp::options;
 
 const char *get_HTTP_request(const char *url);
 
-int get_int_json( const char *text, const char *key);
-double get_double_json( const char *text, const char *key);
-
-const char *create_json(const char *direction, int tag, int raspiId);
-
 void post_HTTP_request(const char *url ,const char *json, int length );
 
 
