@@ -37,15 +37,14 @@ int make_detection_transactions(){
     pKNN->setShadowValue(0);
     cv::VideoCapture cap;
 
-    if (!cap.open("/home/andrej/Music/video3/pi_video3.mkv")) {
+    if (!cap.open(0)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
     cap.set(CV_CAP_PROP_FRAME_WIDTH, frame_width);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, frame_height);
-    cap.set(CV_CAP_PROP_FPS, 2);
-    namedWindow("Tracking", 0);
-    namedWindow("Threshold", 0);
+   // namedWindow("Tracking", 0);
+    //namedWindow("Threshold", 0);
 
     while (1) {
 
@@ -58,7 +57,7 @@ int make_detection_transactions(){
         cv::erode(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 5);
         cv::dilate(rangeRes, rangeRes, cv::Mat(), cv::Point(-1, -1), 8);
 
-        cv::imshow("Threshold", rangeRes);
+      //  cv::imshow("Threshold", rangeRes);
         //  line( res, Point( 0, 200 ), Point( 1280, 200), Scalar( 110, 220, 0 ),  2, 8 );
         //line( res, Point( 0, 520 ), Point( 1280, 520), Scalar( 110, 220, 0 ),  2, 8 );
         vector<vector<cv::Point> > contours;
@@ -68,7 +67,7 @@ int make_detection_transactions(){
         vector<vector<cv::Point> > objects;
         vector<cv::Rect> objectsBox;
         vector<cv::Moments> mus;
-
+        printf("In : %d , Out : %d\n",in,out);
         for (size_t i = 0; i < contours.size(); i++) {
             cv::Rect bBox;
             cv::Moments mu;
@@ -105,7 +104,7 @@ int make_detection_transactions(){
                     kalmanCont newObject(0);
                     newObject.id = id;
                     newObject.set_startingYpos(y);
-                    printf("ID :%d zapisujem zac Y : %d\n",id,y);
+                  //  printf("ID :%d zapisujem zac Y : %d\n",id,y);
                     id++;
                     id = (id > 10) ? 0 : id;
                     newObject.kalmanMakeCalculate(res, objectsBox[i],mus[i], false);
@@ -145,7 +144,7 @@ int make_detection_transactions(){
                             if (abs(direction) > frame_height / 2)
                                 out++;
                         }
-                        printf("ID: %d Objekt konci : %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
+                      //  printf("ID: %d Objekt konci : %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                         KalObjects.erase(KalObjects.begin() + i);
 
                     }
@@ -159,13 +158,12 @@ int make_detection_transactions(){
                         if (abs(direction) > frame_height / 2)
                             out++;
                     }
-                    printf("ID: %d Objekt konci casim: %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
+                  //  printf("ID: %d Objekt konci casim: %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                     KalObjects.erase(KalObjects.begin() + i);
                 }
             }
             //*** print main contours ***//
-            cv::rectangle(res, KalObjects[i].objectsBoxCopy,
-                          CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
+          /*  cv::rectangle(res, KalObjects[i].objectsBoxCopy,CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
             cv::Point center;
             center.x = (int) KalObjects[i].get_centerX();
             center.y = (int) KalObjects[i].get_centerY();
@@ -174,9 +172,9 @@ int make_detection_transactions(){
             sstr << "Objekt" << KalObjects[i].id;
             cv::putText(res, sstr.str(), cv::Point(center.x + 3, center.y - 3), cv::FONT_HERSHEY_SIMPLEX, 0.5,
                         CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
-            //*** print main contours ***//
+            */
         }
-        stringstream ss;
+       /* stringstream ss;
         ss << out;
         string counter = ss.str();
         putText(res, counter.c_str(), cv::Point(5, 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0),
@@ -195,7 +193,7 @@ int make_detection_transactions(){
 
             break;
         }
-
+/**/
     }
     return 0;
 }
