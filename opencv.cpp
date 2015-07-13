@@ -32,12 +32,12 @@ int make_detection_transactions(){
     pKNN = createBackgroundSubtractorKNN();
     pKNN->setShadowThreshold(shadow_thresh);
     pKNN->setDetectShadows(true);
-    pKNN->setDist2Threshold(2700);
+    pKNN->setDist2Threshold(1300);
     pKNN->setHistory(learning_history);
     pKNN->setShadowValue(0);
     cv::VideoCapture cap;
 
-    if (!cap.open("/home/andrej/Music/video2/pi_video2.mkv")) {
+    if (!cap.open("/home/andrej/Music/video3/pi_video3.mkv")) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -105,6 +105,7 @@ int make_detection_transactions(){
                     kalmanCont newObject(0);
                     newObject.id = id;
                     newObject.set_startingYpos(y);
+                    printf("ID :%d zapisujem zac Y : %d\n",id,y);
                     id++;
                     id = (id > 10) ? 0 : id;
                     newObject.kalmanMakeCalculate(res, objectsBox[i],mus[i], false);
@@ -144,7 +145,7 @@ int make_detection_transactions(){
                             if (abs(direction) > frame_height / 2)
                                 out++;
                         }
-                        printf("Objekt konci : %d    %d    %f\n",direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
+                        printf("ID: %d Objekt konci : %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                         KalObjects.erase(KalObjects.begin() + i);
 
                     }
@@ -158,7 +159,7 @@ int make_detection_transactions(){
                         if (abs(direction) > frame_height / 2)
                             out++;
                     }
-                    printf("Objekt konci casim: %d    %d    %f\n",direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
+                    printf("ID: %d Objekt konci casim: %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                     KalObjects.erase(KalObjects.begin() + i);
                 }
             }
