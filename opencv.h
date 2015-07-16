@@ -16,13 +16,16 @@
 using namespace cv;
 using namespace std;
 
+cv::VideoCapture init_cap_bg(const char *url);
 
+void BgSubtractor(cv::Mat &frame , cv::Mat &rangeRes);
+void BgSubtractor2(cv::Mat &frame , cv::Mat &rangeRes);
 
 double CalcDistance(float x_1, float x_2, float y_1, float y_2);
 
 int parsingContours(vector<kalmanCont>& KalObjects, int x,int y, double max);
 
-int make_detection_transactions();
+void make_calculation(cv::Mat &frame, cv::Mat &rangeRes );
 
 
 
