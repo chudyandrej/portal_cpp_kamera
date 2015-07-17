@@ -25,7 +25,9 @@ double CalcDistance(float x_1, float x_2, float y_1, float y_2);
 
 int parsingContours(vector<kalmanCont>& KalObjects, int x,int y, double max);
 
-void make_calculation(cv::Mat &frame, cv::Mat &rangeRes );
+void make_calculation(cv::Mat &frame, cv::Mat &rangeRes, double tick );
+
+int send_transaction(const char *direction);
 
 extern bool with_gui;
 

@@ -16,7 +16,7 @@ void write_settings_to_file(const char *url, const char *newConfiguration);
 
 int get_int_json( const char *text, const char *key);
 double get_double_json( const char *text, const char *key);
-const char *create_json(const char *direction, int tag, int raspiId);
+ char *create_json(const char *direction, int tag);
 
 extern int learning_history;
 extern int thresholding ;

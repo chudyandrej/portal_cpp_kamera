@@ -39,7 +39,7 @@ kalmanCont::kalmanCont(float lastY) : lastY(lastY) {
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 }
 
-void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments mu, bool Kalman_object) {
+void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments mu, bool Kalman_object, double ticks) {
 
     objectsBoxCopy = objectsBox;
 
@@ -79,10 +79,11 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments
         kf.correct(meas);
     }
 
-    precTick = ticks;
-    ticks = (double) cv::getTickCount();
+
+
 
     dT = (float) ((ticks - precTick) / cv::getTickFrequency()); //seconds
+    precTick = ticks;
     if(with_fps) {
         printf("FPS : %f\n", 1 / dT);
     }

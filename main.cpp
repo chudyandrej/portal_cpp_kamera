@@ -9,15 +9,20 @@
 #include <fcntl.h>
 #include "loaded_data.h"
 
+typedef struct {
+    cv::Mat frame;
+    cv::Mat fgKNN;
+    double tick;
+} frame_wrap_t;
+
 bool with_gui =false;
 bool with_fps = false;
-cv::Mat rangeRes_1,frame_t_1;
-cv::Mat rangeRes_2,frame_t_2;
-cv::Mat rangeRes_3,frame_t_3;
-vector <cv::Mat> frames;
-vector <cv::Mat> thrashes;
+frame_wrap_t frame1,frame2,frame3;
+vector<frame_wrap_t> frames;
 cv::VideoCapture cap;
 sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2,*push_m_3,*write_to_list,*data_flow;
+
+
 
 void openCV();
 void BG_thred1();
@@ -67,18 +72,17 @@ void openCV() {
 
         sem_wait(data_flow);
         cv::Mat m1,m2;
+        double m3;
         sem_wait(write_to_list);
 
-        m1=frames[0];
+        m1=frames[0].frame;
+        m2=frames[0].fgKNN;
+        m3 = frames[0].tick;
         frames.erase (frames.begin());
-        m2=thrashes[0];
-        thrashes.erase (thrashes.begin());
-
-        if (frames.size() == 0)
-            sem_post(push_m_1);
         sem_post(write_to_list);
 
-        make_calculation(m1, m2);
+        printf("%d\n",frames.size());
+        make_calculation(m1, m2, m3);
         if(with_gui) {
             waitKey(1);
         }
@@ -92,21 +96,21 @@ void BG_thred1(){
 
         sem_wait(cap_m_1);
 
-        cap >> frame_t_1;
+        cap >> frame1.frame;
+        frame1.tick = (double) cv::getTickCount();
         sem_post(cap_m_2);
 
-        BgSubtractor(frame_t_1 , rangeRes_1);
+        BgSubtractor(frame1.frame , frame1.fgKNN);
 
         sem_wait(push_m_1);
 
         sem_wait(write_to_list);
-        frames.push_back(frame_t_1);
-        thrashes.push_back(rangeRes_1);
-
+        frames.push_back(frame1);
         sem_post(write_to_list);
         sem_post(data_flow);
 
         sem_post(push_m_2);
+        usleep(1);
 
 
 
@@ -116,34 +120,42 @@ void BG_thred1(){
 void BG_thred2(){
     while(1) {
         sem_wait(cap_m_2);
-        cap >> frame_t_2;
-        sem_post(cap_m_1);
+        cap >> frame2.frame;
+        frame2.tick = (double) cv::getTickCount();
+        sem_post(cap_m_3);
 
-        BgSubtractor(frame_t_2 , rangeRes_2);
+        BgSubtractor(frame2.frame , frame2.fgKNN);
 
         sem_wait(push_m_2);
         sem_wait(write_to_list);
-        frames.push_back(frame_t_2);
-        thrashes.push_back(rangeRes_2);
+
+        frames.push_back(frame2);
+
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_3);
+        usleep(50000);
     }
 }
 void BG_thred3(){
     while(1) {
         sem_wait(cap_m_3);
-        cap >> frame_t_2;
+        cap >> frame3.frame;
+        frame3.tick = (double) cv::getTickCount();
         sem_post(cap_m_1);
 
-        BgSubtractor(frame_t_3 , rangeRes_3);
+        BgSubtractor(frame3.frame , frame3.fgKNN);
 
         sem_wait(push_m_3);
         sem_wait(write_to_list);
-        frames.push_back(frame_t_3);
-        thrashes.push_back(rangeRes_3);
+
+        frames.push_back(frame3);
+
         sem_post(write_to_list);
         sem_post(data_flow);
+        sem_post(push_m_1);
+        usleep(100000);
+
     }
 }
 
@@ -185,3 +197,5 @@ void dealock_void(){
     sem_unlink("/atomic_operation");
     sem_unlink("/opencv_flow");
 }
+
+

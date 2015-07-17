@@ -2,7 +2,11 @@
 // Created by andrej on 9.7.2015.
 //
 
+#include <future>
+#include <unistd.h>
 #include "opencv.h"
+#include "loaded_data.h"
+#include "communication.h"
 
 int learning_history = 1000;
 int thresholding = 1300;
@@ -23,7 +27,7 @@ Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(1)) {
+    if (!cap.open(url)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -42,16 +46,17 @@ cv::VideoCapture init_cap_bg(const char *url){
 
 void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
     pKNN->apply(frames, rangeRess);
-    cv::erode(rangeRess, rangeRess, cv::Mat(), cv::Point(-1, -1), 5);
-    cv::dilate(rangeRess, rangeRess, cv::Mat(), cv::Point(-1, -1), 8);
+
 }
 
 
 
-void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
+void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
         cv::Mat thresh_frame;
         rangeRes.copyTo(thresh_frame);
+    cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
+    cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
 
         if(with_gui) {
             cv::imshow("Trashold", thresh_frame);
@@ -104,14 +109,14 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
                   //  printf("ID :%d zapisujem zac Y : %d\n",id,y);
                     id++;
                     id = (id > 10) ? 0 : id;
-                    newObject.kalmanMakeCalculate(res, objectsBox[i],mus[i], false);
+                    newObject.kalmanMakeCalculate(res, objectsBox[i],mus[i], false,tick);
                     KalObjects.push_back(newObject);
 
                 }
 
             }
             else {
-                KalObjects[index_object].kalmanMakeCalculate(res, objectsBox[i],mus[i], false);
+                KalObjects[index_object].kalmanMakeCalculate(res, objectsBox[i],mus[i], false,tick);
 
             }
         }
@@ -132,16 +137,22 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
                     if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 7 || KalObjects[i].get_centerY() < frame_height / 7)) {
                         cv::Rect objectsBoxKalman;
                         cv::Moments mu;
-                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman,mu, true);
+                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman,mu, true,tick);
                     }
                     else {
                         if ((direction = (int) (KalObjects[i].get_startingYpos() - KalObjects[i].get_centerY())) < 0) {
-                            if (abs(direction) > frame_height / 2)
+                            if (abs(direction) > frame_height / 2) {
                                 in++;
+                                std::thread(send_transaction,"in").detach();
+                            }
+
                         }
                         else {
-                            if (abs(direction) > frame_height / 2)
+                            if (abs(direction) > frame_height / 2) {
                                 out++;
+                                std::thread(send_transaction,"out").detach();
+
+                            }
                         }
                       //  printf("ID: %d Objekt konci : %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                         KalObjects.erase(KalObjects.begin() + i);
@@ -150,12 +161,15 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
                 }
                 if (KalObjects[i].get_usingRate() > 30) {
                     if ((direction = (int) (KalObjects[i].get_startingYpos() - KalObjects[i].get_centerY())) < 0) {
-                        if (abs(direction) > frame_height / 2)
+                        if (abs(direction) > frame_height / 2) {
                             in++;
+                            std::thread(send_transaction,"in").detach();                        }
                     }
                     else {
-                        if (abs(direction) > frame_height / 2)
+                        if (abs(direction) > frame_height / 2) {
                             out++;
+                            std::thread(send_transaction,"out").detach();
+                        }
                     }
                   //  printf("ID: %d Objekt konci casim: %d    %d    %f\n",KalObjects[i].id,direction,KalObjects[i].get_startingYpos(),KalObjects[i].get_centerY());
                     KalObjects.erase(KalObjects.begin() + i);
@@ -189,7 +203,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
             cv::imshow("Tracking", res);
         }
         if (!with_gui){
-            printf("in: %d, out: %d\n",in,out);
+           // printf("in: %d, out: %d\n",in,out);
         }
 
 
@@ -233,4 +247,12 @@ double CalcDistance(float x_1, float x_2, float y_1, float y_2){
     distance = sqrt(pow((double) a, 2) + pow((double) b, 2));
 
     return distance;
+}
+
+int send_transaction(const char *direction) {
+    const char *json = create_json(direction, 100001);
+    int length = (int) strlen(json);
+    post_HTTP_request("http://192.168.1.103:3000/api/portal_endpoint/transaction/1" ,json, length );
+    free((char*)json);
+    return 0;
 }

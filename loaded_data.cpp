@@ -116,17 +116,13 @@ double get_double_json( const char *text, const char *key){
     }
 }
 
-const char *create_json(const char *direction, int tag, int raspiId){
-    char *results;
-    char *test;
-    cJSON *root;
+char *create_json(const char *direction, int tag){
+    char *results,*test;
+    sprintf(test,"{\"tagId\":%d,\"direction\":\"%s\"}",tag,direction) ;
 
-    root = cJSON_CreateObject();
-    cJSON_AddItemToObject(root, "direction", cJSON_CreateString(direction));
-    cJSON_AddNumberToObject(root, "tagId", tag);
-    cJSON_AddNumberToObject(root, "raspiId", raspiId);
-    test = cJSON_Print(root);
     results = (char*) malloc(sizeof(char) * strlen(test));
     strcpy (results,test);
+    printf("%s\n",results);
     return results;
+
 }
