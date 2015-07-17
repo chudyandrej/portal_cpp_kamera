@@ -23,7 +23,7 @@ Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(url)) {
+    if (!cap.open(1)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -187,6 +187,9 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
             putText(res, counter2.c_str(), cv::Point(5, 220), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1);
 
             cv::imshow("Tracking", res);
+        }
+        if (!with_gui){
+            printf("in: %d, out: %d\n",in,out);
         }
 
 
