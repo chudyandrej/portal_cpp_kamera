@@ -81,7 +81,7 @@ void openCV() {
         frames.erase (frames.begin());
         sem_post(write_to_list);
 
-        printf("%d\n",frames.size());
+
         make_calculation(m1, m2, m3);
         if(with_gui) {
             waitKey(1);
@@ -110,7 +110,7 @@ void BG_thred1(){
         sem_post(data_flow);
 
         sem_post(push_m_2);
-        usleep(1);
+
 
 
 
@@ -134,7 +134,6 @@ void BG_thred2(){
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_3);
-        usleep(50000);
     }
 }
 void BG_thred3(){
@@ -154,7 +153,7 @@ void BG_thred3(){
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_1);
-        usleep(100000);
+
 
     }
 }
