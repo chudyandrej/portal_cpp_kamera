@@ -27,6 +27,8 @@ int parsingContours(vector<kalmanCont>& KalObjects, int x,int y, double max);
 
 void make_calculation(cv::Mat &frame, cv::Mat &rangeRes );
 
+extern bool with_gui;
+
 
 
 #endif

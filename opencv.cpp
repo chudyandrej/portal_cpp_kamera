@@ -42,6 +42,8 @@ cv::VideoCapture init_cap_bg(const char *url){
 
 void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
     pKNN->apply(frames, rangeRess);
+    cv::erode(rangeRess, rangeRess, cv::Mat(), cv::Point(-1, -1), 5);
+    cv::dilate(rangeRess, rangeRess, cv::Mat(), cv::Point(-1, -1), 8);
 }
 
 
@@ -51,11 +53,9 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
         cv::Mat thresh_frame;
         rangeRes.copyTo(thresh_frame);
 
-        cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
-        cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
-
-        cv::imshow("Trashold", thresh_frame);
-
+        if(with_gui) {
+            cv::imshow("Trashold", thresh_frame);
+        }
         vector<vector<cv::Point>> contours;
         cv::findContours(thresh_frame, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
 
@@ -161,29 +161,33 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes ){
                     KalObjects.erase(KalObjects.begin() + i);
                 }
             }
-
-            cv::rectangle(res, KalObjects[i].objectsBoxCopy,CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
-            cv::Point center;
-            center.x = (int) KalObjects[i].get_centerX();
-            center.y = (int) KalObjects[i].get_centerY();
-            cv::circle(res, center, 2, CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), -1);
-            stringstream sstr;
-            sstr << "Objekt" << KalObjects[i].id;
-            cv::putText(res, sstr.str(), cv::Point(center.x + 3, center.y - 3), cv::FONT_HERSHEY_SIMPLEX, 0.5,
-                        CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
+            if (with_gui) {
+                cv::rectangle(res, KalObjects[i].objectsBoxCopy,
+                              CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
+                cv::Point center;
+                center.x = (int) KalObjects[i].get_centerX();
+                center.y = (int) KalObjects[i].get_centerY();
+                cv::circle(res, center, 2, CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), -1);
+                stringstream sstr;
+                sstr << "Objekt" << KalObjects[i].id;
+                cv::putText(res, sstr.str(), cv::Point(center.x + 3, center.y - 3), cv::FONT_HERSHEY_SIMPLEX, 0.5,
+                            CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
+            }
 
         }
-        stringstream ss;
-        ss << out;
-        string counter = ss.str();
-        putText(res, counter.c_str(), cv::Point(5, 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0),1);
+        if (with_gui) {
+            stringstream ss;
+            ss << out;
+            string counter = ss.str();
+            putText(res, counter.c_str(), cv::Point(5, 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0), 1);
 
-        stringstream ss2;
-        ss2 << in;
-        string counter2 = ss2.str();
-        putText(res, counter2.c_str(), cv::Point(5, 220), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255),1);
+            stringstream ss2;
+            ss2 << in;
+            string counter2 = ss2.str();
+            putText(res, counter2.c_str(), cv::Point(5, 220), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1);
 
-        cv::imshow("Tracking", res);
+            cv::imshow("Tracking", res);
+        }
 
 
 

@@ -83,7 +83,9 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments
     ticks = (double) cv::getTickCount();
 
     dT = (float) ((ticks - precTick) / cv::getTickFrequency()); //seconds
-    printf("FPS : %f\n",1/dT);
+    if(with_fps) {
+        printf("FPS : %f\n", 1 / dT);
+    }
     kf.transitionMatrix.at<float>(2) = dT;
     kf.transitionMatrix.at<float>(9) = dT;
 

@@ -9,6 +9,7 @@
 #include <iostream>
 
 
+extern bool with_fps;
 
 class kalmanCont {
 

@@ -2,94 +2,186 @@
 #include "communication.h"
 #include <thread>
 #include <fstream>
-#include <array>
-#include <iostream>
+
 #include <signal.h>
 #include <semaphore.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include "loaded_data.h"
 
-
-cv::Mat old_rangeRes,old_frame;
-
-
+bool with_gui =false;
+bool with_fps = false;
+cv::Mat rangeRes_1,frame_t_1;
+cv::Mat rangeRes_2,frame_t_2;
+cv::Mat rangeRes_3,frame_t_3;
+vector <cv::Mat> frames;
+vector <cv::Mat> thrashes;
 cv::VideoCapture cap;
-sem_t *stoping_BG,*data_flow;
+sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2,*push_m_3,*write_to_list,*data_flow;
 
 void openCV();
 void BG_thred1();
 void BG_thred2();
 void BG_thred3();
-void communication();
+
 void contro_c(int param);
 void init ();
 void dealock_void();
 
-int main(){
+int main(int argc, char *argv[]){
     setbuf(stdout, NULL);
-
+    for (int i =0; i < argc ; i++) {
+        if (strcmp(argv[i], "-gui") == 0) {
+            with_gui = true;
+        }
+        else if (strcmp(argv[i], "-fps") == 0) {
+            with_fps = true;
+        }
+    }
     dealock_void();
     signal(SIGTERM, contro_c);
+    signal(SIGINT, contro_c);
     init ();
     cap = init_cap_bg("/home/andrej/Music/video_easy/pi_video4.mkv");
-
+    sem_post(cap_m_1);
+    sem_post(push_m_1);
 
     std::thread cv (openCV);
     std::thread thred1 (BG_thred1);
+    std::thread thred2 (BG_thred2);
+    std::thread thred3 (BG_thred3);
 
 
 
-   cv.join();
+    cv.join();
     thred1.join();
-
+    thred2.join();
+    thred3.join();
     return EXIT_SUCCESS;
 }
 
 
-void openCV(){
+void openCV() {
+
     while (1){
+
         sem_wait(data_flow);
-        make_calculation(old_frame, old_rangeRes);
-        waitKey(1);
-        sem_post(stoping_BG);
+        cv::Mat m1,m2;
+        sem_wait(write_to_list);
+
+        m1=frames[0];
+        frames.erase (frames.begin());
+        m2=thrashes[0];
+        thrashes.erase (thrashes.begin());
+
+        if (frames.size() == 0)
+            sem_post(push_m_1);
+        sem_post(write_to_list);
+
+        make_calculation(m1, m2);
+        if(with_gui) {
+            waitKey(1);
+        }
     }
+
+
 }
 
 void BG_thred1(){
-    bool first =false;
-    cv::Mat rangeRes,frame;
     while(1) {
-        sem_wait(stoping_BG);
-        if (first){
-            frame.copyTo(old_frame);
-            rangeRes.copyTo(old_rangeRes);
-            sem_post(data_flow);
-        }
-        cap >> frame;
-        BgSubtractor(frame , rangeRes);
-        first = true;
+
+        sem_wait(cap_m_1);
+
+        cap >> frame_t_1;
+        sem_post(cap_m_2);
+
+        BgSubtractor(frame_t_1 , rangeRes_1);
+
+        sem_wait(push_m_1);
+
+        sem_wait(write_to_list);
+        frames.push_back(frame_t_1);
+        thrashes.push_back(rangeRes_1);
+
+        sem_post(write_to_list);
+        sem_post(data_flow);
+
+        sem_post(push_m_2);
+
+
+
+
+    }
+}
+void BG_thred2(){
+    while(1) {
+        sem_wait(cap_m_2);
+        cap >> frame_t_2;
+        sem_post(cap_m_1);
+
+        BgSubtractor(frame_t_2 , rangeRes_2);
+
+        sem_wait(push_m_2);
+        sem_wait(write_to_list);
+        frames.push_back(frame_t_2);
+        thrashes.push_back(rangeRes_2);
+        sem_post(write_to_list);
+        sem_post(data_flow);
+        sem_post(push_m_3);
+    }
+}
+void BG_thred3(){
+    while(1) {
+        sem_wait(cap_m_3);
+        cap >> frame_t_2;
+        sem_post(cap_m_1);
+
+        BgSubtractor(frame_t_3 , rangeRes_3);
+
+        sem_wait(push_m_3);
+        sem_wait(write_to_list);
+        frames.push_back(frame_t_3);
+        thrashes.push_back(rangeRes_3);
+        sem_post(write_to_list);
+        sem_post(data_flow);
     }
 }
 
-
 void contro_c(int param){
-    kill(getpid()*-1, SIGTERM);
-    fprintf(stderr,"Error: Bpl priaty signal SIGINT.\nProgram sa ukončuje.\n");
     dealock_void();
+    fprintf(stderr,"Error: Bpl priaty signal SIGINT.\nProgram sa ukončuje.\n");
+
     exit(2);
 }
 
 
 void init (){
-    stoping_BG = sem_open("/cap_mutex_1", O_CREAT | O_EXCL, 0666, 2);
+    cap_m_1 = sem_open("/cap_mutex_1", O_CREAT | O_EXCL, 0666, 0);
+    cap_m_2 = sem_open("/cap_mutex_2", O_CREAT | O_EXCL, 0666, 0);
+    cap_m_3 = sem_open("/cap_mutex_3", O_CREAT | O_EXCL, 0666, 0);
+    push_m_1 = sem_open("/push_mutex_1", O_CREAT | O_EXCL, 0666, 0);
+    push_m_2 = sem_open("/push_mutex_2", O_CREAT | O_EXCL, 0666, 0);
+    push_m_3 = sem_open("/push_mutex_3", O_CREAT | O_EXCL, 0666, 0);
+    write_to_list = sem_open("/atomic_operation", O_CREAT | O_EXCL, 0666, 1);
     data_flow = sem_open("/opencv_flow", O_CREAT | O_EXCL, 0666, 0);
 
 }
 void dealock_void(){
-    sem_close(stoping_BG);
+    sem_close(cap_m_1);
+    sem_close(cap_m_2);
+    sem_close(cap_m_3);
+    sem_close(push_m_1);
+    sem_close(push_m_2);
+    sem_close(push_m_3);
+    sem_close(write_to_list);
     sem_close(data_flow);
 
     sem_unlink("/cap_mutex_1");
+    sem_unlink("/cap_mutex_2");
+    sem_unlink("/cap_mutex_3");
+    sem_unlink("/push_mutex_1");
+    sem_unlink("/push_mutex_2");
+    sem_unlink("/push_mutex_3");
+    sem_unlink("/atomic_operation");
     sem_unlink("/opencv_flow");
 }
