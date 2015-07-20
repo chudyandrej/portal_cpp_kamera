@@ -41,6 +41,8 @@ cv::VideoCapture init_cap_bg(const char *url){
     pKNN->setHistory(learning_history);
     pKNN->setShadowValue(0);
 
+
+
     return cap;
 }
 
@@ -249,10 +251,10 @@ double CalcDistance(float x_1, float x_2, float y_1, float y_2){
     return distance;
 }
 
-int send_transaction(const char *direction) {
+void send_transaction(const char *direction) {
     const char *json = create_json(direction, 100001);
     int length = (int) strlen(json);
     post_HTTP_request("http://192.168.1.103:3000/api/portal_endpoint/transaction/1" ,json, length );
     free((char*)json);
-    return 0;
+
 }
