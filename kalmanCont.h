@@ -15,14 +15,14 @@ class kalmanCont {
 
 public:
 
-    kalmanCont(float lastY);
+    kalmanCont();
 
-    void kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,cv::Moments mu ,bool Kalman_object,double ticks);
+    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool Kalman_object,double ticks);
 
 
     void add_usingRate();
 
-    void set_startingYpos(int y);
+    void set_startingYpos(int y_set);
 
     int get_usingRate() const ;
 
@@ -44,10 +44,13 @@ public:
 
     void set_addCounture(bool status);
 
+    void set_id(int id_new);
+
+    int get_id() const;
 
     cv::Rect objectsBoxCopy;
 
-    int R,G,B,id;
+    int R,G,B;
 
 
 
@@ -55,7 +58,7 @@ private:
     cv::KalmanFilter kf;
     cv::Mat meas;
     cv::Mat state;
-    int usingRATE,startingYpso,counter=0;
+    int usingRATE,startingYpso = 0 ,counter=0,id;
     double precTick=0;
     bool found,addCounture = false;
     float dT,x,y,lastX,lastY;

@@ -15,7 +15,7 @@ typedef struct {
     double tick;
 } frame_wrap_t;
 
-int delay = 70000;
+int delay = 100000;
 bool with_gui =false;
 bool with_fps = false;
 bool end_while = true;
@@ -31,14 +31,14 @@ void BG_thred3();
 
 
 int main(int argc, char *argv[]){
-
+    setbuf(stdout, NULL);
     arguments_read(argc, &argv[0]);
 
     dealock_void();
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
     init ();
-    cap = init_cap_bg("/home/andrej/Music/video2/pi_video2.mkv");
+    cap = init_cap_bg("/home/andrej/Music/pi_video6.mkv");
 
     std::thread cv (openCV);
     std::thread thred1 (BG_thred1);

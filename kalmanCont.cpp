@@ -6,7 +6,7 @@
 #include "kalmanCont.h"
 #include "loaded_data.h"
 
-kalmanCont::kalmanCont(float lastY) : lastY(lastY) {
+kalmanCont::kalmanCont() {
 
     kf = cv::KalmanFilter(6, 4, 0, CV_32F);
     state =  cv::Mat(6, 1, CV_32F);  // [x,y,v_x,v_y,w,h]
@@ -39,16 +39,16 @@ kalmanCont::kalmanCont(float lastY) : lastY(lastY) {
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 }
 
-void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments mu, bool Kalman_object, double ticks) {
-
+int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool Kalman_object, double ticks) {
     objectsBoxCopy = objectsBox;
 
     if (!Kalman_object) {
         usingRATE = 0;
-        lastX = (int) (mu.m10/mu.m00);
-        lastY = (int) (mu.m01/mu.m00);
-        meas.at<float>(0) =(int) (mu.m10/mu.m00);                      //center x
-        meas.at<float>(1) =  (int) (mu.m01/mu.m00);                  //center y
+        lastX = objectsBox.x + objectsBox.width / 2;
+        lastY = objectsBox.y + objectsBox.height / 2;
+
+        meas.at<float>(0) =lastX;                      //center x
+        meas.at<float>(1) =  lastY ;                  //center y
         meas.at<float>(2) = (float) objectsBox.width;                   //dlzka
         meas.at<float>(3) = (float) objectsBox.height;                  //vyska
     }
@@ -58,7 +58,6 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments
         meas.at<float>(2) = 50;                   //dlzka
         meas.at<float>(3) = 50;                  //vyska
     }
-
     if (!found){
         kf.errorCovPre.at<float>(0) = 1; // px
         kf.errorCovPre.at<float>(7) = 1; // px
@@ -78,10 +77,6 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments
    else {
         kf.correct(meas);
     }
-
-
-
-
     dT = (float) ((ticks - precTick) / cv::getTickFrequency()); //seconds
     precTick = ticks;
     if(with_fps) {
@@ -105,8 +100,6 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments
     if (center.y >= frame_height)
         center.y = frame_height;
 
-
-
     cv::Rect predRect;
     predRect.width = (int) state.at<float>(4);
     predRect.height = (int) state.at<float>(5);
@@ -118,6 +111,8 @@ void kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox,cv::Moments
 
     x = center.x;
     y = center.y;
+
+    return id;
 }
 
 float kalmanCont::getKalmanXpos() const {
@@ -148,8 +143,8 @@ int kalmanCont::get_startingYpos() const {
     return startingYpso;
 }
 
-void kalmanCont::set_startingYpos(int y) {
-    startingYpso = y;
+void kalmanCont::set_startingYpos(int y_set) {
+    startingYpso = y_set;
 }
 
 void kalmanCont::add_counter() {
@@ -167,4 +162,12 @@ bool kalmanCont::get_addCounture() const {
 
 void kalmanCont::set_addCounture(bool status) {
     addCounture = status;
+}
+
+int kalmanCont::get_id() const {
+    return id;
+}
+
+void kalmanCont::set_id(int id_new) {
+    id = id_new;
 }
