@@ -142,9 +142,14 @@ int kalmanCont::get_usingRate() const {
 int kalmanCont::get_startingYpos() const {
     return startingYpso;
 }
-
+int kalmanCont::get_startingXpos() const {
+    return startingXpso;
+}
 void kalmanCont::set_startingYpos(int y_set) {
     startingYpso = y_set;
+}
+void kalmanCont::set_startingXpos(int x_set) {
+    startingXpso = x_set;
 }
 
 void kalmanCont::add_counter() {

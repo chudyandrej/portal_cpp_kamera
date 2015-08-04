@@ -2,17 +2,19 @@
 // Created by andrej on 9.7.2015.
 //
 
-#include <future>
-#include <unistd.h>
+
+
+
 #include "opencv.h"
-#include "loaded_data.h"
-#include "communication.h"
+
+#define upDown true
+#define lRight flase
 
 int learning_history = 1000;
 int thresholding = 1300;
 int min_area = 2300;
-int min_dist_to_create = 100;
-double max_dist_to_pars = 100;
+int min_dist_to_create = 80;
+double max_dist_to_pars = 50;
 double shadow_thresh = 0.7;
 int frame_width = 320;
 int frame_height = 240;
@@ -27,7 +29,7 @@ Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(url)) {
+    if (!cap.open(1)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -40,144 +42,108 @@ cv::VideoCapture init_cap_bg(const char *url){
     pKNN->setDist2Threshold(thresholding);
     pKNN->setHistory(learning_history);
     pKNN->setShadowValue(0);
-
-
-
     return cap;
 }
 
 void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
     pKNN->apply(frames, rangeRess);
-
 }
-
-
 
 void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
+    cv::Mat thresh_frame;
+    rangeRes.copyTo(thresh_frame);
+    cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
+    cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
+
+    if(with_gui) {
+        cv::imshow("Trashold", thresh_frame);
+    }
+    vector<vector<cv::Point>> contours;
+    cv::findContours(thresh_frame, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+
+    vector<vector<cv::Point> > objects;
+    vector<cv::Rect> objectsBox;
 
 
-        cv::Mat thresh_frame;
-        rangeRes.copyTo(thresh_frame);
-        cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
-        cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
+    for (size_t i = 0; i < contours.size(); i++) {
+        cv::Rect bBox;
+        bBox = cv::boundingRect(contours[i]);
 
-        if(with_gui) {
-            cv::imshow("Trashold", thresh_frame);
+        if (bBox.area() >= min_area) {
+            objects.push_back(contours[i]);
+            objectsBox.push_back(bBox);
         }
-        vector<vector<cv::Point>> contours;
-        cv::findContours(thresh_frame, contours, CV_RETR_EXTERNAL, CV_CHAIN_APPROX_NONE);
+    }
 
-        // <<<<< Contours detection
-        // >>>>> Filtering
-        vector<vector<cv::Point> > objects;
-        vector<cv::Rect> objectsBox;
-
-
-       for (size_t i = 0; i < contours.size(); i++) {
-            cv::Rect bBox;
-            bBox = cv::boundingRect(contours[i]);
-
-
-            // Searching for a bBox almost square
-            if (bBox.area() >= min_area) {
-                objects.push_back(contours[i]);
-                objectsBox.push_back(bBox);
-            }
-        }
-
-        for (size_t i = 0; i < objects.size(); i++) {
-
-            int x = objectsBox[i].x + objectsBox[i].width / 2;
-            int y = objectsBox[i].y + objectsBox[i].height / 2;
-
-
-            int index_object = parsingContours(KalObjects, x, y,max_dist_to_pars);
-           // printf("zhoda %d\n",index_object);
-            if (index_object == -1) {
-                bool create = true;
-
-                for (size_t k = 0; k < KalObjects.size(); k++) {
-                    double distance = CalcDistance(x, KalObjects[k].get_centerX(), y, KalObjects[k].get_centerY());
-
-                    if (min_dist_to_create > distance) {
-                        create = false;
+    for (size_t i = 0; i < KalObjects.size(); i++) {
+        int contourID = parsingContours(objects,objectsBox,KalObjects[i].getKalmanXpos(),KalObjects[i].getKalmanYpos(),max_dist_to_pars);
+        if (contourID == -1 || (KalObjects[i].get_counter() < 5)){
+            contourID = parsingContours(objects,objectsBox,KalObjects[i].get_centerX(),KalObjects[i].get_centerY(),max_dist_to_pars);
+            if(contourID == -1) {
+                if (KalObjects[i].get_counter() < 3) {
+                    KalObjects.erase(KalObjects.begin() + i);
+                }
+                else {
+                    if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 6 ||
+                          KalObjects[i].get_centerY() < frame_height / 6)) {
+                        cv::Rect objectsBoxKalman;
+                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true, tick);
+                    }
+                    else {
+                        counter_person_flow((int)i);
                     }
                 }
-                if (create) {
-                    kalmanCont newObject;
-                    KalObjects.push_back(newObject);
-                    KalObjects[KalObjects.size()-1].set_id(id);
-
-
-
-                    KalObjects[KalObjects.size()-1].set_startingYpos(y);
-
-                    int p = KalObjects[KalObjects.size()-1].kalmanMakeCalculate(res, objectsBox[i], false,tick);
-                    KalObjects[KalObjects.size()-1].set_addCounture(true);
-
-                    id++;
-                    id = (id > 10) ? 0 : id;
+                if (KalObjects[i].get_usingRate() > 30) {
+                    counter_person_flow((int)i);
                 }
-
             }
             else {
 
-                KalObjects[index_object].set_addCounture(true);
-                KalObjects[index_object].kalmanMakeCalculate(res, objectsBox[i], false,tick);
+                KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, tick);
+                KalObjects[i].set_addCounture(true);
+                objectsBox.erase (objectsBox.begin()+ contourID);
+                objects.erase (objects.begin()+ contourID);
             }
         }
+        else{
+
+            KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, tick);
+            KalObjects[i].set_addCounture(true);
+            objectsBox.erase (objectsBox.begin()+ contourID);
+            objects.erase (objects.begin()+ contourID);
+        }
+
+    }
+
+    for (size_t i = 0; i < objects.size(); i++) {
+        bool create = true;
+
+        for (size_t k = 0; k < KalObjects.size(); k++) {
+            double distance = CalcDistance(objectsBox[i].x + objectsBox[i].width / 2, KalObjects[k].get_centerX(), objectsBox[i].y + objectsBox[i].height / 2, KalObjects[k].get_centerY());
+            if (min_dist_to_create > distance) {
+                create = false;
+            }
+        }
+
+        if (create) {
+            kalmanCont newObject;
+            newObject.set_id(id);
+            int D = (person_flow == upDown) ? objectsBox[i].y + objectsBox[i].height / 2 : objectsBox[i].x + objectsBox[i].width / 2;
+            newObject.set_startingYpos(D);
+
+            newObject.kalmanMakeCalculate(res, objectsBox[i], false,tick);
+            newObject.set_addCounture(true);
+            KalObjects.push_back(newObject);
+            id++;
+            id = (id > 10) ? 0 : id;
+        }
+    }
         for (size_t i = 0; i < KalObjects.size(); i++) {
 
             KalObjects[i].add_usingRate();
             KalObjects[i].add_counter();
             KalObjects[i].set_addCounture(false);
-
-           if (KalObjects[i].get_usingRate() > 1) {
-                int direction;
-                if (KalObjects[i].get_counter() < 3) {
-                    KalObjects.erase(KalObjects.begin() + i);
-                }
-                else {
-
-                    if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 7 || KalObjects[i].get_centerY() < frame_height / 7)) {
-                        cv::Rect objectsBoxKalman;
-
-                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman,true,tick);
-                    }
-                    else {
-                        if ((direction = (int) (KalObjects[i].get_startingYpos() - KalObjects[i].get_centerY())) < 0) {
-                            if (abs(direction) > frame_height / 2) {
-                                in++;
-                               // std::thread(send_transaction,"in").detach();
-                            }
-
-                        }
-                        else {
-                            if (abs(direction) > frame_height / 2) {
-                                out++;
-                               // std::thread(send_transaction,"out").detach();
-                            }
-                        }
-
-                        KalObjects.erase(KalObjects.begin() + i);
-
-                    }
-                }
-                if (KalObjects[i].get_usingRate() > 30) {
-                    if ((direction = (int) (KalObjects[i].get_startingYpos() - KalObjects[i].get_centerY())) < 0) {
-                        if (abs(direction) > frame_height / 2) {
-                            in++;
-                        }
-                    }
-                    else {
-                        if (abs(direction) > frame_height / 2) {
-                            out++;
-                        }
-                    }
-                    KalObjects.erase(KalObjects.begin() + i);
-                }
-           }
             if (with_gui) {
                 cv::rectangle(res, KalObjects[i].objectsBoxCopy,CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
                 cv::Point center;
@@ -187,9 +153,8 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
                 stringstream sstr;
                 sstr << "Objekt" << KalObjects[i].get_id();
                 cv::putText(res, sstr.str(), cv::Point(center.x + 3, center.y - 3), cv::FONT_HERSHEY_SIMPLEX, 0.5,
-                            CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
+                                CV_RGB(KalObjects[i].R, KalObjects[i].G, KalObjects[i].B), 2);
             }
-
         }
         if (with_gui) {
             stringstream ss;
@@ -210,27 +175,15 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
 }
 
-int parsingContours(vector<kalmanCont>& KalObjects, int x,int y,  double max) {
+int parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max) {
     double distance;
     int r = -1;
-    for (size_t i = 0; i <KalObjects.size() ; i++) {
-        distance = CalcDistance(x,KalObjects[i].getKalmanXpos(),y, KalObjects[i].getKalmanYpos());
+    for (size_t i = 0; i < objects.size(); i++) {
+        distance = CalcDistance(x,objectsBox[i].x + objectsBox[i].width / 2,y, objectsBox[i].y + objectsBox[i].height / 2);
 
-        if (max > distance && !(KalObjects[i].get_addCounture()) && KalObjects[i].get_counter() > 3) {
+        if (max > distance ) {
             max = distance;
             r = (int)i;
-        }
-
-    }
-
-    if (r == -1 ) {
-        for (size_t k = 0; k < KalObjects.size(); k++) {
-            distance = CalcDistance(x, KalObjects[k].get_centerX(), y, KalObjects[k].get_centerY());
-
-            if (max > distance && !(KalObjects[k].get_addCounture())) {
-                max = distance;
-                r = (int) k;
-            }
         }
     }
     return  r;
@@ -247,10 +200,30 @@ double CalcDistance(float x_1, float x_2, float y_1, float y_2){
     return distance;
 }
 
-void send_transaction(const char *direction) {
-    const char *json = create_json(direction, 100001);
-    int length = (int) strlen(json);
-    post_HTTP_request("http://192.168.1.103:3000/api/portal_endpoint/transaction/1" ,json, length );
-    free((char*)json);
 
+
+void counter_person_flow(int object_index){
+    double distance;
+    distance = (KalObjects[object_index].get_startingYpos() - KalObjects[object_index].get_centerY());
+    if (distance < 0) {
+
+
+        if (abs(distance) > frame_height / 2) {
+            in++;
+             std::thread(send_transaction,"in").detach();
+        }
+
+    }
+    else {
+        if (abs(distance) > frame_height / 2) {
+            out++;
+             std::thread(send_transaction,"out").detach();
+        }
+    }
+    KalObjects.erase(KalObjects.begin() + object_index);
 }
+
+
+
+
+

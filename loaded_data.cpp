@@ -2,14 +2,15 @@
 // Created by andrej on 10.7.2015.
 //
 
-#include <fstream>
+
 #include "loaded_data.h"
 #include "communication.h"
 #include "opencv.h"
 
+vector<string> tag_list;
 
-void save_settings_to_var() {
-    std::hash<std::string> str_hash;
+void save_settings_to_var() {       //hlavný void načíta hodnoty premenných zo súboru overí aktuálnosť zo serverom a zapíše
+     std::hash<std::string> str_hash;
      const char *data_from_http;
      const char *data_from_file;
 
@@ -40,8 +41,56 @@ void save_settings_to_var() {
     }
 }
 
+void save_tags() {       //hlavný void načíta hodnoty premenných zo súboru overí aktuálnosť zo serverom a zapíše
+    std::hash<std::string> str_hash;
+    const char *data_from_http;
+    const char *data_from_file;
+
+    data_from_file = load_tags();
+    data_from_http = get_HTTP_request("http://192.168.1.103:3000/api/portal_endpoint/permissions/1");
+
+    if (data_from_file != NULL && data_from_http != NULL) {
+        std::string str1(data_from_file);
+        std::string str2(data_from_http);
+
+        if (str_hash(str1) != str_hash(str2)) {
+            printf("Inconsistent tag, enrollment\n");
+            write_settings_to_file("/home/pi/tags.txt", data_from_http);
+            free((char *) data_from_http);
+            free((char *) data_from_file);
+            tag_list.clear();
+            data_from_file = load_tags();
+            free((char *) data_from_file);
+        }
+        printf("Tag has been successfully loaded!\n");
+    }
+    else{
+        free((char *) data_from_http);
+        free((char *) data_from_file);
+        if (data_from_file != NULL)
+            printf("Server not a reachable. Program using tags from file.\n");
+        else
+            fprintf(stderr,"Loading tags was unsuccessful! Program dont have tagList.\n");
+    }
+}
+
+
+char *load_tags(){
+    char *tas_from_file = load_data_from_file("/home/pi/tags.txt");
+
+    int max = get_int_json(tas_from_file, "numberOfTags");
+
+    for (int i = 0; i < max ; i++){
+        char tagName[10];
+        sprintf (tagName,"tag%d",i);
+        tag_list.push_back(get_string_json(tas_from_file,tagName));
+    }
+    return tas_from_file;
+}
+
+
 char *load_settings(){
-    char *data_from_file =load_settings_from_file("/home/andrej/ClionProjects/portals/data.log");
+    char *data_from_file = load_data_from_file("data.log");
 
     if(data_from_file != NULL) {
         learning_history = get_int_json(data_from_file, "learning_history");
@@ -58,8 +107,7 @@ char *load_settings(){
         return NULL;
 }
 
-
-char *load_settings_from_file(const char *url){
+char *load_data_from_file(const char *url){
     FILE * pFile;
     char file_content [200];
     char *pointer_to_space;
@@ -116,13 +164,17 @@ double get_double_json( const char *text, const char *key){
     }
 }
 
-char *create_json(const char *direction, int tag){
-    char *results,*test;
-    sprintf(test,"{\"tagId\":%d,\"direction\":\"%s\"}",tag,direction) ;
-
-    results = (char*) malloc(sizeof(char) * strlen(test));
-    strcpy (results,test);
-    printf("%s\n",results);
-    return results;
-
+string get_string_json( const char *text, const char *key){
+    cJSON *json;
+    json=cJSON_Parse(text);
+    if (!json) {
+        printf("Error before: [%s]\n", cJSON_GetErrorPtr());
+        return NULL;
+    }
+    else{
+        string format = cJSON_GetObjectItem(json,key)->valuestring;
+        cJSON_Delete(json);
+        return format;
+    }
 }
+

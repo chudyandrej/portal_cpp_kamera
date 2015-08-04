@@ -8,15 +8,27 @@
 #include <stdio.h>
 #include <string.h>
 #include <malloc.h>
+#include <fstream>
+
+using namespace std;
 
 void save_settings_to_var();
+
+void save_tags();
+
 char *load_settings();
-char *load_settings_from_file(const char *url);
+
+char *load_tags();
+
+char *load_data_from_file(const char *url);
+
 void write_settings_to_file(const char *url, const char *newConfiguration);
 
 int get_int_json( const char *text, const char *key);
+
 double get_double_json( const char *text, const char *key);
- char *create_json(const char *direction, int tag);
+
+string get_string_json( const char *text, const char *key);
 
 extern int learning_history;
 extern int thresholding ;

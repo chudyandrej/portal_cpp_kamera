@@ -23,6 +23,7 @@ public:
     void add_usingRate();
 
     void set_startingYpos(int y_set);
+    void set_startingXpos(int x_set);
 
     int get_usingRate() const ;
 
@@ -35,6 +36,8 @@ public:
     float get_centerY() const ;
 
     int get_startingYpos() const ;
+
+    int get_startingXpos() const ;
 
     void add_counter();
 
@@ -58,7 +61,7 @@ private:
     cv::KalmanFilter kf;
     cv::Mat meas;
     cv::Mat state;
-    int usingRATE,startingYpso = 0 ,counter=0,id;
+    int usingRATE,startingYpso = 0 ,startingXpso = 0,counter=0,id;
     double precTick=0;
     bool found,addCounture = false;
     float dT,x,y,lastX,lastY;
