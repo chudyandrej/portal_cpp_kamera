@@ -40,7 +40,9 @@ void send_transaction(const char *direction) {
 
     const char *json = create_json(direction, 100001);
     int length = (int) strlen(json);
-    int exit_code = post_HTTP_request("http://apis-portals.herokuapp.com/api/portal_endpoint/transaction/1" ,json, length );
+    char url[100];
+    sprintf (url,"%s/api/portal_endpoint/transaction/%d",serverURL,ID);
+    int exit_code = post_HTTP_request(url ,json, length );
     if(exit_code == -1){
         std::string str(json);
         buffer_transactions.push_back(str);
@@ -53,7 +55,7 @@ void send_transaction(const char *direction) {
         if (!empty_bufer) {
             empty_bufer = true;
             while(buffer_transactions.size() != 0){
-                post_HTTP_request("http://apis-portals.herokuapp.com/api/portal_endpoint/transaction/1",buffer_transactions[0].c_str(), (int) buffer_transactions[0].length());
+                post_HTTP_request(url ,buffer_transactions[0].c_str(), (int) buffer_transactions[0].length());
                 buffer_transactions.erase(buffer_transactions.begin());
             }
         }
@@ -99,3 +101,4 @@ char *create_json(const char *direction, int tag){
     return results;
 
 }
+

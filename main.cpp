@@ -1,17 +1,29 @@
+/***************************************************************************************************************************/
+/*                                                 Configuration settings                                                  */
+/**/    int ID = 1;
+/**/    const char *serverURL = "//192.168.1.14:3000";
+/****************************************************************************************************************************/
+
+
 #include "opencv.h"
 #include "communication.h"
 #include <signal.h>
 #include "loaded_data.h"
 #include "declarations.h"
+#include "easywsclient.h"
 
 #include <thread>
 #include <unistd.h>
+
+using easywsclient::WebSocket;
+static WebSocket::pointer ws1 = NULL;
 
 typedef struct {
     cv::Mat frame;
     cv::Mat fgKNN;
     double tick;
 } frame_wrap_t;
+
 
 int delay = 100000;
 bool with_gui =false;
@@ -23,17 +35,22 @@ vector<frame_wrap_t> frames;
 cv::VideoCapture cap;
 sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2,*push_m_3,*write_to_list,*data_flow;
 
+
 void openCV();
 void BG_thred1();
 void BG_thred2();
 void BG_thred3();
-void socket();
+void web_socket();
+void handle_message(const std::string & message);
+
 
 
 int main(int argc, char *argv[]){
+
     setbuf(stdout, NULL);
+
     arguments_read(argc, &argv[0]);
-    save_tags();
+
     dealock_void();
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
@@ -44,7 +61,7 @@ int main(int argc, char *argv[]){
     std::thread thred1 (BG_thred1);
     std::thread thred2 (BG_thred2);
     std::thread thred3 (BG_thred3);
-    std::thread socket (socket);
+    std::thread socket (web_socket);
 
     cv.join();
     thred1.join();
@@ -158,11 +175,29 @@ void BG_thred3(){
 
     }
 }
-void socket(){
+void web_socket(){
+    char json_message[40] ;
+    char url[50];
+    sprintf (url,"ws:%s",serverURL);
+    printf("%s\n",url);
+    save_settings_to_var();
+    save_tags();
 
-
+    ws1 = WebSocket::from_url(url);
+    sprintf (json_message,"{\"topic\":\"authPortal\",\"body\":\"%d\"}",ID);
+    ws1->send(json_message);
+    while (ws1->getReadyState() != WebSocket::CLOSED) {
+        ws1->poll();
+        ws1->dispatch(handle_message);
+        usleep (1 * pow(10,6));                     //sleep 1s
+    }
+    delete ws1;
 }
 
-
-
+void handle_message(const std::string & message){
+    printf(">>> %s\n", message.c_str());
+    if (message == "ping"){
+        ws1->send("pong");
+    }
+}
 

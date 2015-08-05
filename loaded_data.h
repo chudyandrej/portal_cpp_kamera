@@ -9,6 +9,7 @@
 #include <string.h>
 #include <malloc.h>
 #include <fstream>
+#include "communication.h"
 
 using namespace std;
 

@@ -19,7 +19,6 @@
 
 using namespace curlpp::options;
 
-
 void send_transaction(const char *direction);
 
 const char *get_HTTP_request(const char *url);
@@ -27,5 +26,9 @@ const char *get_HTTP_request(const char *url);
 int post_HTTP_request(const char *url ,const char *json, int length );
 
 char *create_json(const char *direction, int tag);
+
+extern const char *serverURL;
+extern int ID;
+
 
 #endif //PORTALS_COMMUNICATION_H

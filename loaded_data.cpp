@@ -4,26 +4,27 @@
 
 
 #include "loaded_data.h"
-#include "communication.h"
-#include "opencv.h"
+
+
 
 vector<string> tag_list;
 
 void save_settings_to_var() {       //hlavný void načíta hodnoty premenných zo súboru overí aktuálnosť zo serverom a zapíše
-     std::hash<std::string> str_hash;
-     const char *data_from_http;
-     const char *data_from_file;
+    std::hash<std::string> str_hash;
+    const char *data_from_http;
+    const char *data_from_file;
+    char url[100];
+    sprintf (url,"%s/api/portal_endpoint/settings/%d",serverURL,ID);
 
     data_from_file = load_settings();
-
-    data_from_http = get_HTTP_request("http://apis-portals.herokuapp.com/api/portal_endpoint/settings/1");
+    data_from_http = get_HTTP_request(url);
     if (data_from_file != NULL && data_from_http != NULL) {
         std::string str1(data_from_file);
         std::string str2(data_from_http);
 
         if (str_hash(str1) != str_hash(str2)) {
             printf("Inconsistent data, enrollment\n");
-            write_settings_to_file("/home/andrej/ClionProjects/portals/data.log", data_from_http);
+            write_settings_to_file("/home/pi/data.log", data_from_http);
             free((char *) data_from_http);
             free((char *) data_from_file);
             data_from_file = load_settings();
@@ -45,9 +46,11 @@ void save_tags() {       //hlavný void načíta hodnoty premenných zo súboru 
     std::hash<std::string> str_hash;
     const char *data_from_http;
     const char *data_from_file;
+    char url[100];
+    sprintf (url,"%s/api/portal_endpoint/permissions/%d",serverURL,ID);
 
     data_from_file = load_tags();
-    data_from_http = get_HTTP_request("http://192.168.1.103:3000/api/portal_endpoint/permissions/1");
+    data_from_http = get_HTTP_request(url);
 
     if (data_from_file != NULL && data_from_http != NULL) {
         std::string str1(data_from_file);
@@ -90,7 +93,7 @@ char *load_tags(){
 
 
 char *load_settings(){
-    char *data_from_file = load_data_from_file("data.log");
+    char *data_from_file = load_data_from_file("/home/pi/data.log");
 
     if(data_from_file != NULL) {
         learning_history = get_int_json(data_from_file, "learning_history");

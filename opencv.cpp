@@ -2,13 +2,9 @@
 // Created by andrej on 9.7.2015.
 //
 
-
-
-
 #include "opencv.h"
 
 #define upDown true
-#define lRight flase
 
 int learning_history = 1000;
 int thresholding = 1300;
@@ -29,7 +25,7 @@ Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(1)) {
+    if (!cap.open(url)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -210,14 +206,14 @@ void counter_person_flow(int object_index){
 
         if (abs(distance) > frame_height / 2) {
             in++;
-             std::thread(send_transaction,"in").detach();
+            std::thread(send_transaction,"in").detach();
         }
 
     }
     else {
         if (abs(distance) > frame_height / 2) {
             out++;
-             std::thread(send_transaction,"out").detach();
+            std::thread(send_transaction,"out").detach();
         }
     }
     KalObjects.erase(KalObjects.begin() + object_index);
