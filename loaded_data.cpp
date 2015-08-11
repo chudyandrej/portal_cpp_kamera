@@ -5,8 +5,6 @@
 
 #include "loaded_data.h"
 
-
-
 vector<string> tag_list;
 
 void save_settings_to_var() {       //hlavný void načíta hodnoty premenných zo súboru overí aktuálnosť zo serverom a zapíše

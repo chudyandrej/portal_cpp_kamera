@@ -6,6 +6,7 @@
 
 #define upDown true
 
+
 int learning_history = 1000;
 int thresholding = 1300;
 int min_area = 2300;
@@ -17,6 +18,7 @@ int frame_height = 240;
 int id = 0;
 int in = 0;
 int out = 0;
+float precTick = 0;
 vector<kalmanCont> KalObjects;
 Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 
@@ -37,7 +39,7 @@ cv::VideoCapture init_cap_bg(const char *url){
     pKNN->setDetectShadows(true);
     pKNN->setDist2Threshold(thresholding);
     pKNN->setHistory(learning_history);
-    pKNN->setShadowValue(0);
+    pKNN->setShadowValue(255);
     return cap;
 }
 
@@ -45,10 +47,17 @@ void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
     pKNN->apply(frames, rangeRess);
 }
 
-void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
+void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
 
     cv::Mat thresh_frame;
     rangeRes.copyTo(thresh_frame);
+
+    float dT = (float) ((tick - precTick) / cv::getTickFrequency()); //seconds
+    precTick = tick;
+    if(with_fps) {
+        printf("FPS : %f\n", 1 / dT);
+    }
+
     cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
     cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
 
@@ -81,22 +90,36 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
                     KalObjects.erase(KalObjects.begin() + i);
                 }
                 else {
-                    if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 6 ||
-                          KalObjects[i].get_centerY() < frame_height / 6)) {
-                        cv::Rect objectsBoxKalman;
-                        KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true, tick);
+                    if (person_flow == upDown) {
+                        if (!(KalObjects[i].get_centerY() > frame_height - frame_height / 6 ||
+                              KalObjects[i].get_centerY() < frame_height / 6)) {
+
+                            cv::Rect objectsBoxKalman;
+                            KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true, dT);
+                        }
+                        else {
+                            counter_person_flow((int) i, person_flow);
+                        }
                     }
                     else {
-                        counter_person_flow((int)i);
+                        if (!(KalObjects[i].get_centerX() > frame_width - frame_width / 6 ||
+                              KalObjects[i].get_centerX() < frame_width / 6)) {
+
+                            cv::Rect objectsBoxKalman;
+                            KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true, dT);
+                        }
+                        else {
+                            counter_person_flow((int) i, person_flow);
+                        }
                     }
                 }
                 if (KalObjects[i].get_usingRate() > 30) {
-                    counter_person_flow((int)i);
+                    counter_person_flow((int)i,person_flow);
                 }
             }
             else {
 
-                KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, tick);
+                KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, dT);
                 KalObjects[i].set_addCounture(true);
                 objectsBox.erase (objectsBox.begin()+ contourID);
                 objects.erase (objects.begin()+ contourID);
@@ -104,7 +127,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
         }
         else{
 
-            KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, tick);
+            KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, dT);
             KalObjects[i].set_addCounture(true);
             objectsBox.erase (objectsBox.begin()+ contourID);
             objects.erase (objects.begin()+ contourID);
@@ -125,10 +148,11 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
         if (create) {
             kalmanCont newObject;
             newObject.set_id(id);
-            int D = (person_flow == upDown) ? objectsBox[i].y + objectsBox[i].height / 2 : objectsBox[i].x + objectsBox[i].width / 2;
-            newObject.set_startingYpos(D);
+            newObject.set_startingYpos(objectsBox[i].y + objectsBox[i].height / 2);
+            newObject.set_startingXpos(objectsBox[i].x + objectsBox[i].width / 2);
 
-            newObject.kalmanMakeCalculate(res, objectsBox[i], false,tick);
+
+            newObject.kalmanMakeCalculate(res, objectsBox[i], false, dT);
             newObject.set_addCounture(true);
             KalObjects.push_back(newObject);
             id++;
@@ -156,17 +180,22 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
             stringstream ss;
             ss << out;
             string counter = ss.str();
-            putText(res, counter.c_str(), cv::Point(5, 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0), 1);
+            putText(res, counter.c_str(), cv::Point(5, 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 255, 0),1);
+
 
             stringstream ss2;
             ss2 << in;
             string counter2 = ss2.str();
-            putText(res, counter2.c_str(), cv::Point(5, 220), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255), 1);
-
+            if (person_flow == upDown) {
+                putText(res, counter2.c_str(), cv::Point(5, frame_height - 30), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255),1);
+            }
+            else {
+                putText(res, counter2.c_str(), cv::Point(frame_width - 70, 30 ), FONT_HERSHEY_SCRIPT_SIMPLEX, 1, cv::Scalar(0, 0, 255),1);
+            }
             cv::imshow("Tracking", res);
         }
         if (!with_gui){
-           // printf("in: %d, out: %d\n",in,out);
+            printf("in: %d, out: %d\n",in,out);
         }
 
 }
@@ -198,22 +227,29 @@ double CalcDistance(float x_1, float x_2, float y_1, float y_2){
 
 
 
-void counter_person_flow(int object_index){
+void counter_person_flow(int object_index , bool direction){
     double distance;
-    distance = (KalObjects[object_index].get_startingYpos() - KalObjects[object_index].get_centerY());
+
+    if (direction == upDown) {
+        distance = (KalObjects[object_index].get_startingYpos() - KalObjects[object_index].get_centerY());
+    }
+    else{
+        distance = (KalObjects[object_index].get_startingXpos() - KalObjects[object_index].get_centerX());
+    }
+
+    int frame_size = (direction == upDown)? frame_height : frame_width;
+
     if (distance < 0) {
-
-
-        if (abs(distance) > frame_height / 2) {
+        if (abs(distance) > frame_size / 2) {
             in++;
-            std::thread(send_transaction,"in").detach();
+          //  std::thread(send_transaction,"in").detach();
         }
 
     }
     else {
-        if (abs(distance) > frame_height / 2) {
+        if (abs(distance) > frame_size / 2) {
             out++;
-            std::thread(send_transaction,"out").detach();
+            //std::thread(send_transaction,"out").detach();
         }
     }
     KalObjects.erase(KalObjects.begin() + object_index);

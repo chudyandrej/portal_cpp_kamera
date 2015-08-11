@@ -17,7 +17,7 @@ public:
 
     kalmanCont();
 
-    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool Kalman_object,double ticks);
+    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool Kalman_object,float dT);
 
 
     void add_usingRate();
@@ -62,9 +62,9 @@ private:
     cv::Mat meas;
     cv::Mat state;
     int usingRATE,startingYpso = 0 ,startingXpso = 0,counter=0,id;
-    double precTick=0;
+
     bool found,addCounture = false;
-    float dT,x,y,lastX,lastY;
+    float x,y,lastX,lastY;
 
 
 };

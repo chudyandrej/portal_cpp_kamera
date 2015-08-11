@@ -25,9 +25,9 @@ double CalcDistance(float x_1, float x_2, float y_1, float y_2);
 
 int  parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max);
 
-void make_calculation(cv::Mat &frame, cv::Mat &rangeRes, double tick );
+void make_calculation(cv::Mat &frame, cv::Mat &rangeRes, float tick );
 
-void counter_person_flow(int object_index);
+void counter_person_flow(int object_index, bool direction);
 
 extern bool with_gui;
 

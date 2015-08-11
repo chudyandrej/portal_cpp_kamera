@@ -11,6 +11,11 @@ void arguments_read(int argc, char **argv){
         else if (strcmp(argv[i], "-fps") == 0) {
             with_fps = true;
         }
+        else if (strcmp(argv[i], "-leftRight") == 0){
+
+            person_flow = false;
+        }
+
     }
 
 }
