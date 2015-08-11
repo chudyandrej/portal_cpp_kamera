@@ -39,7 +39,7 @@ cv::VideoCapture init_cap_bg(const char *url){
     pKNN->setDetectShadows(true);
     pKNN->setDist2Threshold(thresholding);
     pKNN->setHistory(learning_history);
-    pKNN->setShadowValue(255);
+    pKNN->setShadowValue(0);
     return cap;
 }
 
