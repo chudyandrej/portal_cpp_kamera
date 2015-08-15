@@ -10,8 +10,8 @@
 int learning_history = 1000;
 int thresholding = 1300;
 int min_area = 2300;
-int min_dist_to_create = 80;
-double max_dist_to_pars = 50;
+int min_dist_to_create = 100;
+double max_dist_to_pars = 80;
 double shadow_thresh = 0.7;
 int frame_width = 320;
 int frame_height = 240;
@@ -82,9 +82,9 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
     }
 
     for (size_t i = 0; i < KalObjects.size(); i++) {
-        int contourID = parsingContours(objects,objectsBox,KalObjects[i].getKalmanXpos(),KalObjects[i].getKalmanYpos(),max_dist_to_pars);
+        int contourID = parsingContours(objects,objectsBox,KalObjects[i].getKalmanXpos(),KalObjects[i].getKalmanYpos(),max_dist_to_pars,KalObjects[i].get_object_on_frame());
         if (contourID == -1 || (KalObjects[i].get_counter() < 5)){
-            contourID = parsingContours(objects,objectsBox,KalObjects[i].get_centerX(),KalObjects[i].get_centerY(),max_dist_to_pars);
+            contourID = parsingContours(objects,objectsBox,KalObjects[i].get_centerX(),KalObjects[i].get_centerY(),max_dist_to_pars,KalObjects[i].get_object_on_frame());
             if(contourID == -1) {
                 if (KalObjects[i].get_counter() < 3) {
                     KalObjects.erase(KalObjects.begin() + i);
@@ -95,7 +95,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
                               KalObjects[i].get_centerY() < frame_height / 6)) {
 
                             cv::Rect objectsBoxKalman;
-                            KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true, dT);
+                            KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, false, dT);
                         }
                         else {
                             counter_person_flow((int) i, person_flow);
@@ -106,7 +106,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
                               KalObjects[i].get_centerX() < frame_width / 6)) {
 
                             cv::Rect objectsBoxKalman;
-                            KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, true, dT);
+                            KalObjects[i].kalmanMakeCalculate(res, objectsBoxKalman, false, dT);
                         }
                         else {
                             counter_person_flow((int) i, person_flow);
@@ -119,7 +119,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
             }
             else {
 
-                KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, dT);
+                KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], true, dT);
                 KalObjects[i].set_addCounture(true);
                 objectsBox.erase (objectsBox.begin()+ contourID);
                 objects.erase (objects.begin()+ contourID);
@@ -127,7 +127,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
         }
         else{
 
-            KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], false, dT);
+            KalObjects[i].kalmanMakeCalculate(res, objectsBox[contourID], true, dT);
             KalObjects[i].set_addCounture(true);
             objectsBox.erase (objectsBox.begin()+ contourID);
             objects.erase (objects.begin()+ contourID);
@@ -137,22 +137,24 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
 
     for (size_t i = 0; i < objects.size(); i++) {
         bool create = true;
+        int x = objectsBox[i].x + objectsBox[i].width / 2;
+        int y = objectsBox[i].y + objectsBox[i].height / 2;
 
         for (size_t k = 0; k < KalObjects.size(); k++) {
-            double distance = CalcDistance(objectsBox[i].x + objectsBox[i].width / 2, KalObjects[k].get_centerX(), objectsBox[i].y + objectsBox[i].height / 2, KalObjects[k].get_centerY());
+            double distance = CalcDistance(x , KalObjects[k].get_centerX(), y, KalObjects[k].get_centerY());
             if (min_dist_to_create > distance) {
                 create = false;
             }
         }
 
-        if (create) {
+        if (create && ((x > frame_width - frame_width / 6 || x < frame_width / 6) || (y > frame_height - frame_height / 6 || y < frame_height / 6))) {
             kalmanCont newObject;
             newObject.set_id(id);
             newObject.set_startingYpos(objectsBox[i].y + objectsBox[i].height / 2);
             newObject.set_startingXpos(objectsBox[i].x + objectsBox[i].width / 2);
 
 
-            newObject.kalmanMakeCalculate(res, objectsBox[i], false, dT);
+            newObject.kalmanMakeCalculate(res, objectsBox[i], true, dT);
             newObject.set_addCounture(true);
             KalObjects.push_back(newObject);
             id++;
@@ -200,13 +202,15 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
 
 }
 
-int parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max) {
+int parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max, bool object_frame) {
     double distance;
     int r = -1;
     for (size_t i = 0; i < objects.size(); i++) {
         distance = CalcDistance(x,objectsBox[i].x + objectsBox[i].width / 2,y, objectsBox[i].y + objectsBox[i].height / 2);
-
-        if (max > distance ) {
+        if (!object_frame){
+            distance = distance - 40;
+        }
+        if (max > distance) {
             max = distance;
             r = (int)i;
         }

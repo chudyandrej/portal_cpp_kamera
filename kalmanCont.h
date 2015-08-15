@@ -17,7 +17,7 @@ public:
 
     kalmanCont();
 
-    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool Kalman_object,float dT);
+    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool object_on_frame,float dT);
 
 
     void add_usingRate();
@@ -51,6 +51,8 @@ public:
 
     int get_id() const;
 
+    bool get_object_on_frame() const;
+
     cv::Rect objectsBoxCopy;
 
     int R,G,B;
@@ -63,7 +65,7 @@ private:
     cv::Mat state;
     int usingRATE,startingYpso = 0 ,startingXpso = 0,counter=0,id;
 
-    bool found,addCounture = false;
+    bool first_start,addCounture = false,object_on_frame;
     float x,y,lastX,lastY;
 
 

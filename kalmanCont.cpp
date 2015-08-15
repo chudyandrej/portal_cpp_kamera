@@ -12,7 +12,7 @@ kalmanCont::kalmanCont() {
     state =  cv::Mat(6, 1, CV_32F);  // [x,y,v_x,v_y,w,h]
     meas =  cv::Mat(4, 1, CV_32F);    // [z_x,z_y,z_w,z_h]
 
-    found = false;
+    first_start = false;
     usingRATE= 0;
 
     R = rand() % 255;
@@ -39,15 +39,16 @@ kalmanCont::kalmanCont() {
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 }
 
-int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool Kalman_object, float dT) {
+int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object_frame, float dT) {
     objectsBoxCopy = objectsBox;
+    object_on_frame = object_frame;
 
-    if (!Kalman_object) {
+    if (object_on_frame) {
         usingRATE = 0;
         lastX = objectsBox.x + objectsBox.width / 2;
         lastY = objectsBox.y + objectsBox.height / 2;
 
-        meas.at<float>(0) =lastX;                      //center x
+        meas.at<float>(0) = lastX;                      //center x
         meas.at<float>(1) =  lastY ;                  //center y
         meas.at<float>(2) = (float) objectsBox.width;                   //dlzka
         meas.at<float>(3) = (float) objectsBox.height;                  //vyska
@@ -58,7 +59,7 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool Kalman
         meas.at<float>(2) = 50;                   //dlzka
         meas.at<float>(3) = 50;                  //vyska
     }
-    if (!found){
+    if (!first_start){
         kf.errorCovPre.at<float>(0) = 1; // px
         kf.errorCovPre.at<float>(7) = 1; // px
         kf.errorCovPre.at<float>(14) = 1;
@@ -72,7 +73,7 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool Kalman
         state.at<float>(3) = 0;
         state.at<float>(4) = meas.at<float>(2);                         //dlzka
         state.at<float>(5) = meas.at<float>(3);
-        found = true;
+        first_start = true;
     }
    else {
         kf.correct(meas);
@@ -171,4 +172,8 @@ int kalmanCont::get_id() const {
 
 void kalmanCont::set_id(int id_new) {
     id = id_new;
+}
+
+bool kalmanCont::get_object_on_frame() const {
+    return object_on_frame;
 }
