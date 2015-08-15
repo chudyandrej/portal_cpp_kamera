@@ -21,13 +21,13 @@ int out = 0;
 double precTick = 0;
 vector<kalmanCont> KalObjects;
 Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
-
-
+time_t start,end_time;
+int counter=0;
 
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(1)) {
+    if (!cap.open(url)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -40,6 +40,9 @@ cv::VideoCapture init_cap_bg(const char *url){
     pKNN->setDist2Threshold(thresholding);
     pKNN->setHistory(learning_history);
     pKNN->setShadowValue(0);
+
+    time(&start);
+
     return cap;
 }
 
@@ -55,9 +58,13 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
     double dT =  ((tick - precTick ) / cv::getTickFrequency()); //seconds
     precTick = tick;
     if(with_fps) {
-        printf("FPS : %f\n", (float)1/dT);
+        printf("FPS ticks : %f", (float)1/dT);
     }
-
+    time(&end_time);
+    ++counter;
+    double sec=difftime(end_time,start);
+    double fps=counter/sec;
+    printf("   => %lf\n",fps);
 
     cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
     cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
@@ -198,7 +205,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
             cv::imshow("Tracking", res);
         }
         if (!with_gui){
-            printf("in: %d, out: %d\n",in,out);
+           // printf("in: %d, out: %d\n",in,out);
         }
 
 }

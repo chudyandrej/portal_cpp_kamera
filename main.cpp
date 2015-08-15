@@ -115,8 +115,8 @@ void BG_thred1(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
-        frame1.tick = (double) cv::getTickCount();
         sem_post(cap_m_2);
+        frame1.tick = (double) cv::getTickCount();
 
         BgSubtractor(frame1.frame , frame1.fgKNN);
 
@@ -139,8 +139,8 @@ void BG_thred2(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
-        frame2.tick = (double) cv::getTickCount();
         sem_post(cap_m_3);
+        frame2.tick = (double) cv::getTickCount();
 
         BgSubtractor(frame2.frame , frame2.fgKNN);
 
@@ -164,9 +164,8 @@ void BG_thred3(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
-        frame3.tick = (double) cv::getTickCount();
         sem_post(cap_m_1);
-
+        frame3.tick = (double) cv::getTickCount();
         BgSubtractor(frame3.frame , frame3.fgKNN);
 
         sem_wait(push_m_3);
