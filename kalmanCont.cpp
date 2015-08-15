@@ -39,7 +39,7 @@ kalmanCont::kalmanCont() {
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 }
 
-int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object_frame, float dT) {
+int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object_frame, double dT) {
     objectsBoxCopy = objectsBox;
     object_on_frame = object_frame;
 
@@ -79,8 +79,8 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object
         kf.correct(meas);
     }
 
-    kf.transitionMatrix.at<float>(2) = dT;
-    kf.transitionMatrix.at<float>(9) = dT;
+    kf.transitionMatrix.at<float>(2) = (float) dT;
+    kf.transitionMatrix.at<float>(9) = (float) dT;
 
     state = kf.predict();
 

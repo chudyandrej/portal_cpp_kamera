@@ -18,7 +18,7 @@ int frame_height = 240;
 int id = 0;
 int in = 0;
 int out = 0;
-float precTick = 0;
+double precTick = 0;
 vector<kalmanCont> KalObjects;
 Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 
@@ -27,7 +27,7 @@ Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(url)) {
+    if (!cap.open(1)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -47,16 +47,17 @@ void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
     pKNN->apply(frames, rangeRess);
 }
 
-void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
+void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
     cv::Mat thresh_frame;
     rangeRes.copyTo(thresh_frame);
 
-    float dT = (float) ((tick - precTick) / cv::getTickFrequency()); //seconds
+    double dT =  ((tick - precTick ) / cv::getTickFrequency()); //seconds
     precTick = tick;
     if(with_fps) {
-        printf("FPS : %f\n", 1 / dT);
+        printf("FPS : %f\n", (float)1/dT);
     }
+
 
     cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
     cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
@@ -82,11 +83,11 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
     }
 
     for (size_t i = 0; i < KalObjects.size(); i++) {
-        int contourID = parsingContours(objects,objectsBox,KalObjects[i].getKalmanXpos(),KalObjects[i].getKalmanYpos(),max_dist_to_pars,KalObjects[i].get_object_on_frame());
-        if (contourID == -1 || (KalObjects[i].get_counter() < 5)){
-            contourID = parsingContours(objects,objectsBox,KalObjects[i].get_centerX(),KalObjects[i].get_centerY(),max_dist_to_pars,KalObjects[i].get_object_on_frame());
+        int contourID = parsingContours(objects,objectsBox,KalObjects[i].getKalmanXpos(),KalObjects[i].getKalmanYpos(),max_dist_to_pars);
+        if (contourID == -1 || (KalObjects[i].get_counter() < 3)){
+            contourID = parsingContours(objects,objectsBox,KalObjects[i].get_centerX(),KalObjects[i].get_centerY(),max_dist_to_pars);
             if(contourID == -1) {
-                if (KalObjects[i].get_counter() < 3) {
+                if (KalObjects[i].get_counter() < 2) {
                     KalObjects.erase(KalObjects.begin() + i);
                 }
                 else {
@@ -202,14 +203,12 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, float tick){
 
 }
 
-int parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max, bool object_frame) {
+int parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max) {
     double distance;
     int r = -1;
     for (size_t i = 0; i < objects.size(); i++) {
         distance = CalcDistance(x,objectsBox[i].x + objectsBox[i].width / 2,y, objectsBox[i].y + objectsBox[i].height / 2);
-        if (!object_frame){
-            distance = distance - 40;
-        }
+
         if (max > distance) {
             max = distance;
             r = (int)i;

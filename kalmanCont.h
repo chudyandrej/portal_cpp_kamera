@@ -17,7 +17,7 @@ public:
 
     kalmanCont();
 
-    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool object_on_frame,float dT);
+    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool object_on_frame,double dT);
 
 
     void add_usingRate();

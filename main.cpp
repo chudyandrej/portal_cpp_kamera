@@ -21,11 +21,11 @@ static WebSocket::pointer ws1 = NULL;
 typedef struct {
     cv::Mat frame;
     cv::Mat fgKNN;
-    float tick;
+    double tick;
 } frame_wrap_t;
 
 
-int delay = 100000;
+int delay = 1;
 bool with_gui =false;
 bool with_fps = false;
 bool end_while = true;
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]){
 void openCV() {
     int counter =0;
     cv::Mat original_frame, subtract_frame;
-    float frame_tick;
+    double frame_tick;
     if(with_gui) {
         namedWindow("Trashold", 0);
         namedWindow("Tracking", 0);
@@ -92,7 +92,7 @@ void openCV() {
         sem_post(write_to_list);
 
         counter++;
-        printf("%d\n",(int)frames.size());
+       // printf("%d\n",(int)frames.size());
         if(counter == 3 && frames.size() == 0 ){
             sem_post(push_m_1);
             counter = 0;
@@ -115,7 +115,7 @@ void BG_thred1(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
-        frame1.tick = (float) cv::getTickCount();
+        frame1.tick = (double) cv::getTickCount();
         sem_post(cap_m_2);
 
         BgSubtractor(frame1.frame , frame1.fgKNN);
@@ -139,7 +139,7 @@ void BG_thred2(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
-        frame2.tick = (float) cv::getTickCount();
+        frame2.tick = (double) cv::getTickCount();
         sem_post(cap_m_3);
 
         BgSubtractor(frame2.frame , frame2.fgKNN);
@@ -164,7 +164,7 @@ void BG_thred3(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
-        frame3.tick = (float) cv::getTickCount();
+        frame3.tick = (double) cv::getTickCount();
         sem_post(cap_m_1);
 
         BgSubtractor(frame3.frame , frame3.fgKNN);
