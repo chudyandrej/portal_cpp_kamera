@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
     init ();
-    cap = init_cap_bg("/home/andrej/Music/colisions/video.mkv");
+    cap = init_cap_bg("/home/andrej/Videos/Webcam/videoApis.avi");
 
     std::thread cv (openCV);
     std::thread thred1 (BG_thred1);
@@ -81,6 +81,7 @@ void openCV() {
         namedWindow("Tracking", 0);
     }
     while (end_while){
+
         sem_wait(data_flow);
 
         sem_wait(write_to_list);
@@ -89,6 +90,7 @@ void openCV() {
         subtract_frame =frames[0].fgKNN;
         frame_tick = frames[0].tick;
         frames.erase (frames.begin());
+
         sem_post(write_to_list);
 
         counter++;
@@ -109,12 +111,12 @@ void BG_thred1(){
     while(end_while) {
 
         sem_wait(cap_m_1);
-
         if(!cap.read(frame1.frame)) {
             fprintf(stderr, "The camera has been disconnected!\n");
             dealock_void();
             exit(EXIT_FAILURE);
         }
+        usleep((__useconds_t) delay);
         sem_post(cap_m_2);
         frame1.tick = (double) cv::getTickCount();
 
@@ -125,9 +127,7 @@ void BG_thred1(){
         frames.push_back(frame1);
         sem_post(write_to_list);
         sem_post(data_flow);
-
         sem_post(push_m_2);
-        usleep((__useconds_t) delay);
     }
 }
 void BG_thred2(){
@@ -139,6 +139,7 @@ void BG_thred2(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
+        usleep((__useconds_t) delay);
         sem_post(cap_m_3);
         frame2.tick = (double) cv::getTickCount();
 
@@ -152,7 +153,6 @@ void BG_thred2(){
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_3);
-        usleep((__useconds_t) delay);
     }
 }
 void BG_thred3(){
@@ -164,6 +164,7 @@ void BG_thred3(){
             dealock_void();
             exit(EXIT_FAILURE);
         }
+        usleep((__useconds_t) delay);
         sem_post(cap_m_1);
         frame3.tick = (double) cv::getTickCount();
         BgSubtractor(frame3.frame , frame3.fgKNN);
@@ -175,7 +176,7 @@ void BG_thred3(){
 
         sem_post(write_to_list);
         sem_post(data_flow);
-        usleep((__useconds_t) delay);
+
 
     }
 }

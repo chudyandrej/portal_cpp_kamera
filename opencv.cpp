@@ -9,7 +9,7 @@
 
 int learning_history = 1000;
 int thresholding = 1300;
-int min_area = 2300;
+int min_area = 1500;
 int min_dist_to_create = 100;
 double max_dist_to_pars = 80;
 double shadow_thresh = 0.7;
@@ -20,29 +20,25 @@ int in = 0;
 int out = 0;
 double precTick = 0;
 vector<kalmanCont> KalObjects;
-Ptr<BackgroundSubtractorKNN> pKNN; //MOG2 Background subtractor.
-time_t start,end_time;
-int counter=0;
+Ptr<BackgroundSubtractorKNN> pKNN;
+
 
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(url)) {
+    if (!cap.open(0)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
     cap.set(CV_CAP_PROP_FRAME_WIDTH, frame_width);
     cap.set(CV_CAP_PROP_FRAME_HEIGHT, frame_height);
-
+    cap.set(CV_CAP_PROP_FPS , 30);
     pKNN = createBackgroundSubtractorKNN();
     pKNN->setShadowThreshold(shadow_thresh);
     pKNN->setDetectShadows(true);
     pKNN->setDist2Threshold(thresholding);
     pKNN->setHistory(learning_history);
     pKNN->setShadowValue(0);
-
-    time(&start);
-
     return cap;
 }
 
@@ -52,19 +48,15 @@ void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
 
 void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
+
     cv::Mat thresh_frame;
     rangeRes.copyTo(thresh_frame);
 
     double dT =  ((tick - precTick ) / cv::getTickFrequency()); //seconds
     precTick = tick;
     if(with_fps) {
-        printf("FPS ticks : %f", (float)1/dT);
+        printf("FPS ticks : %f\n", (float) 1 / dT);
     }
-    time(&end_time);
-    ++counter;
-    double sec=difftime(end_time,start);
-    double fps=counter/sec;
-    printf("   => %lf\n",fps);
 
     cv::erode(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 5);
     cv::dilate(thresh_frame, thresh_frame, cv::Mat(), cv::Point(-1, -1), 8);
@@ -91,7 +83,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
     for (size_t i = 0; i < KalObjects.size(); i++) {
         int contourID = parsingContours(objects,objectsBox,KalObjects[i].getKalmanXpos(),KalObjects[i].getKalmanYpos(),max_dist_to_pars);
-        if (contourID == -1 || (KalObjects[i].get_counter() < 3)){
+        if (contourID == -1 || (KalObjects[i].get_counter() < 14)){
             contourID = parsingContours(objects,objectsBox,KalObjects[i].get_centerX(),KalObjects[i].get_centerY(),max_dist_to_pars);
             if(contourID == -1) {
                 if (KalObjects[i].get_counter() < 2) {
