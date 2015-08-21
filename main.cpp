@@ -25,7 +25,7 @@ typedef struct {
 } frame_wrap_t;
 
 
-int delay = 1;
+int delay = 0;
 bool with_gui =false;
 bool with_fps = false;
 bool end_while = true;
@@ -55,7 +55,7 @@ int main(int argc, char *argv[]){
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
     init ();
-    cap = init_cap_bg("/home/andrej/Videos/Webcam/videoApis.avi");
+    cap = init_cap_bg("/home/andrej/Music/video3/pi_video3.mkv");
 
     std::thread cv (openCV);
     std::thread thred1 (BG_thred1);
@@ -101,7 +101,10 @@ void openCV() {
         }
 
 
-        make_calculation(original_frame, subtract_frame, frame_tick);
+        int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
+        if (exit_code != 0){
+            print("WTF ???");
+        }
         if(with_gui) {
             waitKey(1);
         }

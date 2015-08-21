@@ -10,7 +10,7 @@
 int learning_history = 1000;
 int thresholding = 1300;
 int min_area = 1500;
-int min_dist_to_create = 100;
+int min_dist_to_create = 20;
 double max_dist_to_pars = 80;
 double shadow_thresh = 0.7;
 int frame_width = 320;
@@ -26,7 +26,7 @@ Ptr<BackgroundSubtractorKNN> pKNN;
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(0)) {
+    if (!cap.open(1)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -46,7 +46,7 @@ void BgSubtractor(cv::Mat &frames , cv::Mat &rangeRess){
     pKNN->apply(frames, rangeRess);
 }
 
-void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
+int make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
 
 
     cv::Mat thresh_frame;
@@ -199,6 +199,7 @@ void make_calculation(cv::Mat &res, cv::Mat &rangeRes, double tick){
         if (!with_gui){
            // printf("in: %d, out: %d\n",in,out);
         }
+    return 0;
 
 }
 
