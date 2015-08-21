@@ -25,13 +25,13 @@ typedef struct {
 } frame_wrap_t;
 
 
-int delay = 0;
+int delay = 20000;
 bool with_gui =false;
 bool with_fps = false;
 bool end_while = true;
 bool person_flow = true;
 frame_wrap_t frame1,frame2,frame3;
-
+vector<frame_wrap_t> frames;
 cv::VideoCapture cap;
 sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2,*push_m_3,*write_to_list,*data_flow;
 
@@ -75,7 +75,7 @@ int main(int argc, char *argv[]){
 void openCV() {
     int counter =0;
     cv::Mat original_frame, subtract_frame;
-    double frame_tick = 0;
+    double frame_tick;
     if(with_gui) {
         namedWindow("Trashold", 0);
         namedWindow("Tracking", 0);
@@ -84,24 +84,22 @@ void openCV() {
 
         sem_wait(data_flow);
 
-        if (counter == 0) {
-            original_frame = frame1.frame;
-            subtract_frame = frame1.fgKNN;
-            frame_tick = frame1.tick;
-        }
-        if(counter == 1){
-            original_frame = frame2.frame;
-            subtract_frame = frame2.fgKNN;
-            frame_tick = frame2.tick;
-        }
-        if(counter == 2){
-            original_frame = frame3.frame;
-            subtract_frame = frame3.fgKNN;
-            frame_tick = frame3.tick;
-            sem_post(push_m_1);
+        sem_wait(write_to_list);
+
+        original_frame =frames[0].frame;
+        subtract_frame =frames[0].fgKNN;
+        frame_tick = frames[0].tick;
+        frames.erase (frames.begin());
+
+        sem_post(write_to_list);
+
+        counter++;
+       // printf("%d\n",(int)frames.size());
+        if(counter == 3 && frames.size() == 0 ){
+
             counter = 0;
         }
-        counter++;
+
 
         int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
         if (exit_code != 0){
@@ -128,7 +126,10 @@ void BG_thred1(){
         BgSubtractor(frame1.frame , frame1.fgKNN);
 
         sem_wait(push_m_1);
-
+        sem_wait(write_to_list);
+        frames.push_back(frame1);
+        printf("fram1\n");
+        sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_2);
     }
@@ -149,7 +150,11 @@ void BG_thred2(){
         BgSubtractor(frame2.frame , frame2.fgKNN);
 
         sem_wait(push_m_2);
+        sem_wait(write_to_list);
 
+        frames.push_back(frame2);
+        printf("fram2\n");
+        sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_3);
     }
@@ -167,11 +172,15 @@ void BG_thred3(){
         sem_post(cap_m_1);
         frame3.tick = (double) cv::getTickCount();
         BgSubtractor(frame3.frame , frame3.fgKNN);
-
+        usleep(456806);
         sem_wait(push_m_3);
+        sem_wait(write_to_list);
 
+        frames.push_back(frame3);
+        printf("fram3\n");
+        sem_post(write_to_list);
         sem_post(data_flow);
-
+        sem_post(push_m_1);
 
     }
 }
