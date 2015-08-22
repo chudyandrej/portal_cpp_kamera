@@ -25,7 +25,7 @@ typedef struct {
 } frame_wrap_t;
 
 
-int delay = 20000;
+int delay = 0;
 bool with_gui =false;
 bool with_fps = false;
 bool end_while = true;
@@ -73,7 +73,7 @@ int main(int argc, char *argv[]){
 }
 
 void openCV() {
-    int counter =0;
+    int counter = 0;
     cv::Mat original_frame, subtract_frame;
     double frame_tick;
     if(with_gui) {
@@ -83,28 +83,25 @@ void openCV() {
     while (end_while){
 
         sem_wait(data_flow);
-
+	
         sem_wait(write_to_list);
-
+	counter++;
         original_frame =frames[0].frame;
         subtract_frame =frames[0].fgKNN;
         frame_tick = frames[0].tick;
+         std::cout << "size:" << frames.size() << '\n';
         frames.erase (frames.begin());
-
+	if((frames.size() == 0) && (counter == 3)){
+		
+		counter = 0;	
+	}
+	
         sem_post(write_to_list);
-
-        counter++;
-       // printf("%d\n",(int)frames.size());
-        if(counter == 3 && frames.size() == 0 ){
-
-            counter = 0;
-        }
-
-
-        int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
+	int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
         if (exit_code != 0){
             printf("WTF ???");
         }
+        
         if(with_gui) {
             waitKey(1);
         }
@@ -124,7 +121,7 @@ void BG_thred1(){
         frame1.tick = (double) cv::getTickCount();
 
         BgSubtractor(frame1.frame , frame1.fgKNN);
-
+ usleep(500000);
         sem_wait(push_m_1);
         sem_wait(write_to_list);
         frames.push_back(frame1);
@@ -148,7 +145,7 @@ void BG_thred2(){
         frame2.tick = (double) cv::getTickCount();
 
         BgSubtractor(frame2.frame , frame2.fgKNN);
-
+ usleep(500000);
         sem_wait(push_m_2);
         sem_wait(write_to_list);
 
@@ -172,7 +169,8 @@ void BG_thred3(){
         sem_post(cap_m_1);
         frame3.tick = (double) cv::getTickCount();
         BgSubtractor(frame3.frame , frame3.fgKNN);
-        usleep(456806);
+	 usleep(500000);
+       
         sem_wait(push_m_3);
         sem_wait(write_to_list);
 
@@ -180,7 +178,7 @@ void BG_thred3(){
         printf("fram3\n");
         sem_post(write_to_list);
         sem_post(data_flow);
-        sem_post(push_m_1);
+       sem_post(push_m_1);
 
     }
 }

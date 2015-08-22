@@ -26,7 +26,7 @@ Ptr<BackgroundSubtractorKNN> pKNN;
 cv::VideoCapture init_cap_bg(const char *url){
 
     cv::VideoCapture cap;
-    if (!cap.open(url)) {
+    if (!cap.open(0)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
