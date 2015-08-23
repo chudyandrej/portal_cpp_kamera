@@ -1,19 +1,24 @@
-/***************************************************************************************************************************/
-/*                                                 Configuration settings                                                  */
+/**************************************************************************************************/
+/*                                                 Configuration settings                         */
 /**/    int ID = 1;
 /**/    const char *serverURL = "//192.168.1.14:3000";
-/****************************************************************************************************************************/
+/*************************************************************************************************/
 
+#include <signal.h>
+#include <queue>
+#include <thread>
+#include <unistd.h>
+
+#include <new>
 
 #include "opencv.h"
 #include "communication.h"
-#include <signal.h>
 #include "loaded_data.h"
 #include "declarations.h"
 #include "easywsclient.h"
 
-#include <thread>
-#include <unistd.h>
+
+
 
 using easywsclient::WebSocket;
 static WebSocket::pointer ws1 = NULL;
@@ -22,30 +27,31 @@ typedef struct {
     cv::Mat frame;
     cv::Mat fgKNN;
     double tick;
+    int id;
 } frame_wrap_t;
 
 
 int delay = 0;
-bool with_gui =false;
+bool with_gui = false;
 bool with_fps = false;
 bool end_while = true;
 bool person_flow = true;
-frame_wrap_t frame1,frame2,frame3;
-vector<frame_wrap_t> frames;
+
+queue<frame_wrap_t*> frames;
 cv::VideoCapture cap;
-sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2,*push_m_3,*write_to_list,*data_flow;
+sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2, *push_m_3,*write_to_list,*data_flow;
 
 
 void openCV();
-void BG_thred1();
-void BG_thred2();
-void BG_thred3();
+void BG_thread1();
+void BG_thread2();
+void BG_thread3();
 void web_socket();
 void handle_message(const std::string & message);
 
 
 
-int main(int argc, char *argv[]){
+int main(int argc, char *argv[]) {
 
     setbuf(stdout, NULL);
 
@@ -54,50 +60,62 @@ int main(int argc, char *argv[]){
     dealock_void();
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
-    init ();
+    init();
     cap = init_cap_bg("/home/andrej/Music/video3/pi_video3.mkv");
 
-    std::thread cv (openCV);
-    std::thread thred1 (BG_thred1);
-    std::thread thred2 (BG_thred2);
-    std::thread thred3 (BG_thred3);
+    std::thread cv(openCV);
+    std::thread thread1(BG_thread1);
+    std::thread thread2(BG_thread2);
+    std::thread thread3(BG_thread3);
    // std::thread socket (web_socket);
 
     cv.join();
-    thred1.join();
-    thred2.join();
-    thred3.join();
+    thread1.join();
+    thread2.join();
+    thread3.join();
     // socket.join();
 
     return EXIT_SUCCESS;
 }
 
 void openCV() {
-    int counter = 0;
     cv::Mat original_frame, subtract_frame;
     double frame_tick;
-    if(with_gui) {
+    if (with_gui) {
         namedWindow("Trashold", 0);
         namedWindow("Tracking", 0);
     }
-    while (end_while){
-
+    while (end_while) {
         sem_wait(data_flow);
-	
         sem_wait(write_to_list);
-	counter++;
-        original_frame =frames[0].frame;
-        subtract_frame =frames[0].fgKNN;
-        frame_tick = frames[0].tick;
-         std::cout << "size:" << frames.size() << '\n';
-        frames.erase (frames.begin());
-	if((frames.size() == 0) && (counter == 3)){
-		
-		counter = 0;	
-	}
-	
+        printf("%s\n", "test" );
+        original_frame = frames.front()->frame;
+        subtract_frame = frames.front()->fgKNN;
+        frame_tick = frames.front()->tick;
+        printf("tick2 : %f", frame_tick);
+        
+        delete frames.front();
+        std::cout << "size:" << frames.size() << '\n';
+        int sem_val;
+        sem_getvalue(data_flow, &sem_val);
+        printf("data_flow : %d\n", sem_val);
+
+        frames.pop();
         sem_post(write_to_list);
-	int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
+        usleep(100000);
+		int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
+        if (frames.size() > 200) {
+        
+                end_while = false;
+                usleep(100000);
+                while(!frames.empty()) {
+                    delete frames.front();
+                    dealock_void();
+                    frames.pop();
+                }
+
+
+        }
         if (exit_code != 0){
             printf("WTF ???");
         }
@@ -107,81 +125,96 @@ void openCV() {
         }
     }
 }
-void BG_thred1(){
+void BG_thread1(){
+    
+    
     while(end_while) {
-
+        frame_wrap_t *frame1 = new frame_wrap_t;
+        if (frame1 == NULL) {
+            printf("malloc failed\n");
+        }
         sem_wait(cap_m_1);
-        if(!cap.read(frame1.frame)) {
+
+        if(!cap.read(frame1->frame)) {
             fprintf(stderr, "The camera has been disconnected!\n");
             dealock_void();
             exit(EXIT_FAILURE);
         }
         usleep((__useconds_t) delay);
         sem_post(cap_m_2);
-        frame1.tick = (double) cv::getTickCount();
+        frame1->tick = (double) cv::getTickCount();
+     
+        BgSubtractor(frame1->frame , frame1->fgKNN);
 
-        BgSubtractor(frame1.frame , frame1.fgKNN);
- usleep(500000);
         sem_wait(push_m_1);
         sem_wait(write_to_list);
-        frames.push_back(frame1);
+        frames.push(frame1);
         printf("fram1\n");
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_2);
     }
 }
-void BG_thred2(){
+
+void BG_thread2() {
 
     while(end_while) {
+        frame_wrap_t *frame2 = new frame_wrap_t;
+        if (frame2 == NULL) {
+            printf("malloc failed\n");
+        }        
         sem_wait(cap_m_2);
-        if(!cap.read(frame2.frame)) {
+        if(!cap.read(frame2->frame)) {
             fprintf(stderr, "The camera has been disconnected!\n");
             dealock_void();
             exit(EXIT_FAILURE);
         }
         usleep((__useconds_t) delay);
         sem_post(cap_m_3);
-        frame2.tick = (double) cv::getTickCount();
+        frame2->tick = (double) cv::getTickCount();
 
-        BgSubtractor(frame2.frame , frame2.fgKNN);
- usleep(500000);
+        BgSubtractor(frame2->frame , frame2->fgKNN);
         sem_wait(push_m_2);
         sem_wait(write_to_list);
 
-        frames.push_back(frame2);
+        frames.push(frame2);
         printf("fram2\n");
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_3);
     }
 }
-void BG_thred3(){
+void BG_thread3() {
 
     while(end_while) {
+
+        frame_wrap_t *frame3 = new frame_wrap_t;
+        if (frame3 == NULL) {
+            printf("malloc failed\n");
+        }        
         sem_wait(cap_m_3);
-        if(!cap.read(frame3.frame)) {
+        if(!cap.read(frame3->frame)) {
             fprintf(stderr, "The camera has been disconnected!\n");
             dealock_void();
             exit(EXIT_FAILURE);
         }
         usleep((__useconds_t) delay);
         sem_post(cap_m_1);
-        frame3.tick = (double) cv::getTickCount();
-        BgSubtractor(frame3.frame , frame3.fgKNN);
-	 usleep(500000);
+        frame3->tick = (double) cv::getTickCount();
+        BgSubtractor(frame3->frame , frame3->fgKNN);
        
         sem_wait(push_m_3);
         sem_wait(write_to_list);
 
-        frames.push_back(frame3);
+        frames.push(frame3);
         printf("fram3\n");
         sem_post(write_to_list);
         sem_post(data_flow);
-       sem_post(push_m_1);
+        sem_post(push_m_1);
 
     }
 }
+
 void web_socket(){
     char json_message[40] ;
     char url[50];
