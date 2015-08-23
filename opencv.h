@@ -19,13 +19,13 @@ using namespace std;
 
 cv::VideoCapture init_cap_bg(const char *url);
 
-void BgSubtractor(cv::Mat &frame , cv::Mat &rangeRes);
+void BgSubtractor(cv::Mat *frame, cv::Mat *fg_mask);
 
 double CalcDistance(float x_1, float x_2, float y_1, float y_2);
 
 int  parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max);
 
-int make_calculation(cv::Mat &frame, cv::Mat &rangeRes, double tick );
+int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 
 void counter_person_flow(int object_index, bool direction);
 

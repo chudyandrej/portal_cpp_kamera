@@ -8,7 +8,6 @@
 #include <queue>
 #include <thread>
 #include <unistd.h>
-
 #include <new>
 
 #include "opencv.h"
@@ -25,9 +24,8 @@ static WebSocket::pointer ws1 = NULL;
 
 typedef struct {
     cv::Mat frame;
-    cv::Mat fgKNN;
+    cv::Mat fg_mask;
     double tick;
-    int id;
 } frame_wrap_t;
 
 
@@ -79,7 +77,7 @@ int main(int argc, char *argv[]) {
 }
 
 void openCV() {
-    cv::Mat original_frame, subtract_frame;
+    cv::Mat frame, fg_mask;
     double frame_tick;
     if (with_gui) {
         namedWindow("Trashold", 0);
@@ -89,8 +87,8 @@ void openCV() {
         sem_wait(data_flow);
         sem_wait(write_to_list);
         printf("%s\n", "test" );
-        original_frame = frames.front()->frame;
-        subtract_frame = frames.front()->fgKNN;
+        frame = frames.front()->frame;
+        fg_mask = frames.front()->fg_mask;
         frame_tick = frames.front()->tick;
         printf("tick2 : %f", frame_tick);
         
@@ -103,7 +101,7 @@ void openCV() {
         frames.pop();
         sem_post(write_to_list);
         usleep(100000);
-		int exit_code = make_calculation(original_frame, subtract_frame, frame_tick);
+		int exit_code = ProcessFrame(&frame, &fg_mask, frame_tick);
         if (frames.size() > 200) {
         
                 end_while = false;
@@ -144,7 +142,7 @@ void BG_thread1(){
         sem_post(cap_m_2);
         frame1->tick = (double) cv::getTickCount();
      
-        BgSubtractor(frame1->frame , frame1->fgKNN);
+        BgSubtractor(&(frame1->frame), &(frame1->fg_mask));
 
         sem_wait(push_m_1);
         sem_wait(write_to_list);
@@ -173,7 +171,7 @@ void BG_thread2() {
         sem_post(cap_m_3);
         frame2->tick = (double) cv::getTickCount();
 
-        BgSubtractor(frame2->frame , frame2->fgKNN);
+        BgSubtractor(&(frame2->frame), &(frame2->fg_mask));
         sem_wait(push_m_2);
         sem_wait(write_to_list);
 
@@ -201,7 +199,7 @@ void BG_thread3() {
         usleep((__useconds_t) delay);
         sem_post(cap_m_1);
         frame3->tick = (double) cv::getTickCount();
-        BgSubtractor(frame3->frame , frame3->fgKNN);
+        BgSubtractor(&(frame3->frame), &(frame3->fg_mask));
        
         sem_wait(push_m_3);
         sem_wait(write_to_list);
