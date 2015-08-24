@@ -27,32 +27,29 @@ public:
 
     int get_usingRate() const ;
 
-    float getKalmanXpos() const;
+    float get_kalman_x_pos() const;
 
-    float getKalmanYpos() const;
+    float get_kalman_y_pos() const;
 
-    float get_centerX() const ;
+    float last_x_pos() const ;
 
-    float get_centerY() const ;
+    float last_y_pos() const ;
 
-    int get_startingYpos() const ;
+    int starting_y_pos() const ;
 
-    int get_startingXpos() const ;
+    int starting_x_pos() const ;
 
-    void add_counter();
+    void set_counter();
 
-    int get_counter() const ;
-
-    bool get_addCounture() const;
-
-    void set_addCounture(bool status);
+    int counter() const ;
+   
 
     void set_id(int id_new);
 
-    int get_id() const;
-
-    bool get_object_on_frame() const;
-
+    int id() const;
+    
+    int object_area() const;
+    
     cv::Rect objectsBoxCopy;
 
     int R,G,B;
@@ -63,10 +60,10 @@ private:
     cv::KalmanFilter kf;
     cv::Mat meas;
     cv::Mat state;
-    int usingRATE,startingYpso = 0 ,startingXpso = 0,counter=0,id;
-
-    bool first_start,addCounture = false,object_on_frame;
-    float x,y,lastX,lastY;
+    int using_rate_, starting_y_pos_ = 0 , starting_x_pos_ = 0, counter_ = 0, id_;
+    int object_area_;
+    bool first_start;
+    float x,y, last_x_pos_, last_y_pos_;
 
 
 };

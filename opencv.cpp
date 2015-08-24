@@ -26,7 +26,7 @@ Ptr<BackgroundSubtractorKNN> pKNN;
 
 cv::VideoCapture init_cap_bg(const char *url) {
     cv::VideoCapture cap;
-    if (!cap.open(0)) {
+    if (!cap.open(url)) {
         cout << "Webcam not connected.\n" << "Please verify\n";
         return -1;
     }
@@ -76,17 +76,19 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
     }
 
     for (size_t i = 0; i < tracked_objects.size(); i++) {
-        int contourID = parsingContours(objects,objectsBox,tracked_objects[i].getKalmanXpos(),tracked_objects[i].getKalmanYpos(),max_dist_to_pars);
-        if (contourID == -1 || (tracked_objects[i].get_counter() < 14)){
-            contourID = parsingContours(objects,objectsBox,tracked_objects[i].get_centerX(),tracked_objects[i].get_centerY(),max_dist_to_pars);
+        int contourID = parsingContours(objects,objectsBox, tracked_objects[i].get_kalman_x_pos(),
+                                        tracked_objects[i].get_kalman_y_pos(),max_dist_to_pars);
+        if (contourID == -1 || (tracked_objects[i].counter() < 14)){
+            contourID = parsingContours(objects,objectsBox, tracked_objects[i].last_x_pos(),
+                                        tracked_objects[i].last_y_pos(),max_dist_to_pars);
             if(contourID == -1) {
-                if (tracked_objects[i].get_counter() < 2) {
+                if (tracked_objects[i].counter() < 2) {
                     tracked_objects.erase(tracked_objects.begin() + i);
                 }
                 else {
                     if (person_flow == upDown) {
-                        if (!(tracked_objects[i].get_centerY() > frame_height - frame_height / 6 ||
-                              tracked_objects[i].get_centerY() < frame_height / 6)) {
+                        if (!(tracked_objects[i].last_y_pos() > frame_height - frame_height / 6 ||
+                              tracked_objects[i].last_y_pos() < frame_height / 6)) {
 
                             cv::Rect objectsBoxKalman;
                             tracked_objects[i].kalmanMakeCalculate(*frame, objectsBoxKalman, false, dT);
@@ -97,8 +99,8 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                         }
                     }
                     else {
-                        if (!(tracked_objects[i].get_centerX() > frame_width - frame_width / 6 ||
-                              tracked_objects[i].get_centerX() < frame_width / 6)) {
+                        if (!(tracked_objects[i].last_x_pos() > frame_width - frame_width / 6 ||
+                              tracked_objects[i].last_x_pos() < frame_width / 6)) {
 
                             cv::Rect objectsBoxKalman;
                             tracked_objects[i].kalmanMakeCalculate(*frame, objectsBoxKalman, false, dT);
@@ -117,7 +119,6 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
             else {
 
                 tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], true, dT);
-       
                 objectsBox.erase (objectsBox.begin()+ contourID);
                 objects.erase (objects.begin()+ contourID);
             }
@@ -125,7 +126,6 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         else{
 
             tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], true, dT);
-           
             objectsBox.erase (objectsBox.begin()+ contourID);
             objects.erase (objects.begin()+ contourID);
         }
@@ -138,7 +138,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         int y = objectsBox[i].y + objectsBox[i].height / 2;
 
         for (size_t k = 0; k < tracked_objects.size(); k++) {
-            double distance = CalcDistance(x , tracked_objects[k].get_centerX(), y, tracked_objects[k].get_centerY());
+            double distance = CalcDistance(x , tracked_objects[k].last_x_pos(), y, tracked_objects[k].last_y_pos());
             if (min_dist_to_create > distance) {
                 create = false;
             }
@@ -161,15 +161,15 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
     for (size_t i = 0; i < tracked_objects.size(); i++) {
 
         tracked_objects[i].add_usingRate();
-        tracked_objects[i].add_counter();
+        tracked_objects[i].set_counter();
         if (with_gui) {
             cv::rectangle(*frame, tracked_objects[i].objectsBoxCopy,CV_RGB(tracked_objects[i].R, tracked_objects[i].G, tracked_objects[i].B), 2);
             cv::Point center;
-            center.x = (int) tracked_objects[i].get_centerX();
-            center.y = (int) tracked_objects[i].get_centerY();
+            center.x = (int) tracked_objects[i].last_x_pos();
+            center.y = (int) tracked_objects[i].last_y_pos();
             cv::circle(*frame, center, 2, CV_RGB(tracked_objects[i].R, tracked_objects[i].G, tracked_objects[i].B), -1);
             stringstream sstr;
-            sstr << "Objekt" << tracked_objects[i].get_id();
+            sstr << "Objekt" << tracked_objects[i].id();
             cv::putText(*frame, sstr.str(), cv::Point(center.x + 3, center.y - 3), cv::FONT_HERSHEY_SIMPLEX, 0.5,
                             CV_RGB(tracked_objects[i].R, tracked_objects[i].G, tracked_objects[i].B), 2);
         }
@@ -230,10 +230,10 @@ void counter_person_flow(int object_index , bool direction){
     double distance;
 
     if (direction == upDown) {
-        distance = (tracked_objects[object_index].get_startingYpos() - tracked_objects[object_index].get_centerY());
+        distance = (tracked_objects[object_index].starting_y_pos() - tracked_objects[object_index].last_y_pos());
     }
     else{
-        distance = (tracked_objects[object_index].get_startingXpos() - tracked_objects[object_index].get_centerX());
+        distance = (tracked_objects[object_index].starting_x_pos() - tracked_objects[object_index].last_x_pos());
     }
 
     int frame_size = (direction == upDown)? frame_height : frame_width;

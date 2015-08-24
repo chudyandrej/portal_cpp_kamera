@@ -16,9 +16,6 @@
 #include "declarations.h"
 #include "easywsclient.h"
 
-
-
-
 using easywsclient::WebSocket;
 static WebSocket::pointer ws1 = NULL;
 
@@ -27,7 +24,6 @@ typedef struct {
     cv::Mat fg_mask;
     double tick;
 } frame_wrap_t;
-
 
 int delay = 0;
 bool with_gui = false;
@@ -39,7 +35,6 @@ queue<frame_wrap_t*> frames;
 cv::VideoCapture cap;
 sem_t *cap_m_1,*cap_m_2,*cap_m_3,*push_m_1,*push_m_2, *push_m_3,*write_to_list,*data_flow;
 
-
 void openCV();
 void BG_thread1();
 void BG_thread2();
@@ -47,14 +42,10 @@ void BG_thread3();
 void web_socket();
 void handle_message(const std::string & message);
 
-
-
 int main(int argc, char *argv[]) {
 
     setbuf(stdout, NULL);
-
     arguments_read(argc, &argv[0]);
-
     dealock_void();
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
@@ -78,54 +69,38 @@ int main(int argc, char *argv[]) {
 
 void openCV() {
     cv::Mat frame, fg_mask;
+    int counter = 0;
     double frame_tick;
     if (with_gui) {
-        namedWindow("Trashold", 0);
+        namedWindow("Threshold", 0);
         namedWindow("Tracking", 0);
     }
     while (end_while) {
         sem_wait(data_flow);
         sem_wait(write_to_list);
-        printf("%s\n", "test" );
         frame = frames.front()->frame;
         fg_mask = frames.front()->fg_mask;
         frame_tick = frames.front()->tick;
-        printf("tick2 : %f", frame_tick);
-        
         delete frames.front();
-        std::cout << "size:" << frames.size() << '\n';
-        int sem_val;
-        sem_getvalue(data_flow, &sem_val);
-        printf("data_flow : %d\n", sem_val);
-
         frames.pop();
         sem_post(write_to_list);
-        usleep(100000);
-		int exit_code = ProcessFrame(&frame, &fg_mask, frame_tick);
-        if (frames.size() > 200) {
-        
-                end_while = false;
-                usleep(100000);
-                while(!frames.empty()) {
-                    delete frames.front();
-                    dealock_void();
-                    frames.pop();
-                }
-
-
+        counter++;
+        if (counter == 3){
+            counter = 0;
+            sem_post(push_m_1);
         }
+		int exit_code = ProcessFrame(&frame, &fg_mask, frame_tick);
         if (exit_code != 0){
             printf("WTF ???");
         }
-        
         if(with_gui) {
             waitKey(1);
         }
     }
 }
+
 void BG_thread1(){
-    
-    
+
     while(end_while) {
         frame_wrap_t *frame1 = new frame_wrap_t;
         if (frame1 == NULL) {
@@ -147,7 +122,6 @@ void BG_thread1(){
         sem_wait(push_m_1);
         sem_wait(write_to_list);
         frames.push(frame1);
-        printf("fram1\n");
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_2);
@@ -176,12 +150,12 @@ void BG_thread2() {
         sem_wait(write_to_list);
 
         frames.push(frame2);
-        printf("fram2\n");
         sem_post(write_to_list);
         sem_post(data_flow);
         sem_post(push_m_3);
     }
 }
+
 void BG_thread3() {
 
     while(end_while) {
@@ -205,11 +179,8 @@ void BG_thread3() {
         sem_wait(write_to_list);
 
         frames.push(frame3);
-        printf("fram3\n");
         sem_post(write_to_list);
         sem_post(data_flow);
-        sem_post(push_m_1);
-
     }
 }
 

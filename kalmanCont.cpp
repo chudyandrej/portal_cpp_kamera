@@ -13,7 +13,7 @@ kalmanCont::kalmanCont() {
     meas =  cv::Mat(4, 1, CV_32F);    // [z_x,z_y,z_w,z_h]
 
     first_start = false;
-    usingRATE= 0;
+    using_rate_ = 0;
 
     R = rand() % 255;
     G = rand() % 255;
@@ -41,15 +41,16 @@ kalmanCont::kalmanCont() {
 
 int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object_frame, double dT) {
     objectsBoxCopy = objectsBox;
-    object_on_frame = object_frame;
 
-    if (object_on_frame) {
-        usingRATE = 0;
-        lastX = objectsBox.x + objectsBox.width / 2;
-        lastY = objectsBox.y + objectsBox.height / 2;
+    object_area_ = objectsBox.area();
 
-        meas.at<float>(0) = lastX;                      //center x
-        meas.at<float>(1) =  lastY ;                  //center y
+    if (object_frame) {
+        using_rate_ = 0;
+        last_x_pos_ = objectsBox.x + objectsBox.width / 2;
+        last_y_pos_ = objectsBox.y + objectsBox.height / 2;
+
+        meas.at<float>(0) = last_x_pos_;                      //center x
+        meas.at<float>(1) = last_y_pos_;                  //center y
         meas.at<float>(2) = (float) objectsBox.width;                   //dlzka
         meas.at<float>(3) = (float) objectsBox.height;                  //vyska
     }
@@ -109,71 +110,64 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object
     x = center.x;
     y = center.y;
 
-    return id;
+    return id_;
 }
 
-float kalmanCont::getKalmanXpos() const {
+float kalmanCont::get_kalman_x_pos() const {
     return x;
 }
 
-float kalmanCont::getKalmanYpos() const {
+float kalmanCont::get_kalman_y_pos() const {
     return y;
 }
 
-float kalmanCont::get_centerX() const {
-    return lastX;
+float kalmanCont::last_x_pos() const {
+    return last_x_pos_;
 }
 
-float kalmanCont::get_centerY() const {
-    return lastY ;
+float kalmanCont::last_y_pos() const {
+    return last_y_pos_;
 }
 
 void kalmanCont::add_usingRate() {
-    usingRATE++;
+    using_rate_++;
 }
 
 int kalmanCont::get_usingRate() const {
-    return usingRATE;
+    return using_rate_;
 }
 
-int kalmanCont::get_startingYpos() const {
-    return startingYpso;
+int kalmanCont::starting_y_pos() const {
+    return starting_y_pos_;
 }
-int kalmanCont::get_startingXpos() const {
-    return startingXpso;
+int kalmanCont::starting_x_pos() const {
+    return starting_x_pos_;
 }
 void kalmanCont::set_startingYpos(int y_set) {
-    startingYpso = y_set;
+    starting_y_pos_ = y_set;
 }
 void kalmanCont::set_startingXpos(int x_set) {
-    startingXpso = x_set;
+    starting_x_pos_ = x_set;
 }
 
-void kalmanCont::add_counter() {
-    counter++;
+void kalmanCont::set_counter() {
+    counter_++;
 
 }
 
-int kalmanCont::get_counter() const {
-    return counter;
+int kalmanCont::counter() const {
+    return counter_;
 }
 
-bool kalmanCont::get_addCounture() const {
-    return addCounture;
-}
 
-void kalmanCont::set_addCounture(bool status) {
-    addCounture = status;
-}
-
-int kalmanCont::get_id() const {
-    return id;
+int kalmanCont::id() const {
+    return id_;
 }
 
 void kalmanCont::set_id(int id_new) {
-    id = id_new;
+    id_ = id_new;
 }
 
-bool kalmanCont::get_object_on_frame() const {
-    return object_on_frame;
+int kalmanCont::object_area() const {
+    return object_area_;
 }
