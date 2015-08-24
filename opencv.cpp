@@ -8,9 +8,9 @@
 
 int learning_history = 1000;
 int thresholding = 1300;
-int min_area = 1500;
+int min_area = 1800;
 int min_dist_to_create = 20;
-double max_dist_to_pars = 200;
+double max_dist_to_pars = 100;
 double shadow_thresh = 0.7;
 int frame_width = 320;
 int frame_height = 240;
@@ -81,7 +81,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
     for (size_t i = 0; i < tracked_objects.size(); i++) {
         int contourID = parsingContours(hsv, objects,objectsBox, tracked_objects[i].get_kalman_x_pos(),
                                         tracked_objects[i].get_kalman_y_pos(),max_dist_to_pars, tracked_objects[i].hist());
-        if (contourID == -1 || (tracked_objects[i].counter() < 14)){
+        if (contourID == -1 || (tracked_objects[i].counter() < 5)){
             contourID = parsingContours(hsv, objects,objectsBox, tracked_objects[i].last_x_pos(),
                                         tracked_objects[i].last_y_pos(),max_dist_to_pars,tracked_objects[i].hist());
             if(contourID == -1) {
@@ -91,9 +91,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                 else {
                     if (person_flow == upDown) {
                         if (!(tracked_objects[i].last_y_pos() > frame_height - frame_height / 6 ||
-                              tracked_objects[i].last_y_pos() < frame_height / 6)) {
-
-                            cv::Rect objectsBoxKalman;
+                                tracked_objects[i].last_y_pos() < frame_height / 6) ) {
                             tracked_objects[i].kalmanMakeCalculate(*frame,  dT);
                         }
                         else {
@@ -102,10 +100,9 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                         }
                     }
                     else {
+
                         if (!(tracked_objects[i].last_x_pos() > frame_width - frame_width / 6 ||
                               tracked_objects[i].last_x_pos() < frame_width / 6)) {
-
-                            cv::Rect objectsBoxKalman;
                             tracked_objects[i].kalmanMakeCalculate(*frame, dT);
                         }
                         else {
@@ -120,9 +117,11 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                 }
             }
             else {
-
                 cv::MatND hist = CalcHistogramBase(hsv, objects, contourID, tracked_objects[i].hist());
                 tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], dT, hist);
+                if (counter_person_flow((int)i,person_flow) == 0){
+                    tracked_objects[i].set_startingYpos((objectsBox[contourID].y + objectsBox[contourID].height / 2));
+                }
                 objectsBox.erase (objectsBox.begin()+ contourID);
                 objects.erase (objects.begin()+ contourID);
             }
@@ -130,6 +129,9 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         else{
             cv::MatND hist = CalcHistogramBase(hsv, objects, contourID, tracked_objects[i].hist());
             tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], dT, hist);
+            if (counter_person_flow((int)i,person_flow) == 0){
+                tracked_objects[i].set_startingYpos((objectsBox[contourID].y + objectsBox[contourID].height / 2));
+            }
             objectsBox.erase (objectsBox.begin()+ contourID);
             objects.erase (objects.begin()+ contourID);
         }
@@ -268,12 +270,12 @@ int parsingContours(cv::Mat hsv,
         MatND hist_base) {
 
     double distance;
-    int r = -1;
+
         // Histogram stuff
     
 
     double best_match_result = 0;
-    double best_match_id = -1;
+    int best_match_id = -1;
     for (int i = 0; i < objects.size(); i++) {
         distance = CalcDistance(x, objectsBox[i].x + objectsBox[i].width / 2,
             y, objectsBox[i].y + objectsBox[i].height / 2);
@@ -288,12 +290,6 @@ int parsingContours(cv::Mat hsv,
                 best_match_result = result;
             }
         }
-
-
-        
-        
-
-        
     }
     return  best_match_id;
 }
@@ -311,8 +307,9 @@ double CalcDistance(float x1, float x2, float y1, float y2){
 
 
 
-void counter_person_flow(int object_index , bool direction){
+int counter_person_flow(int object_index , bool direction){
     double distance;
+    int result = -1;
 
     if (direction == upDown) {
         distance = (tracked_objects[object_index].starting_y_pos() - tracked_objects[object_index].last_y_pos());
@@ -326,17 +323,18 @@ void counter_person_flow(int object_index , bool direction){
     if (distance < 0) {
         if (abs(distance) > frame_size / 2) {
             in++;
+            result = 0;
           //  std::thread(send_transaction,"in").detach();
         }
-
     }
     else {
         if (abs(distance) > frame_size / 2) {
             out++;
+            result = 0;
             //std::thread(send_transaction,"out").detach();
         }
     }
-   
+    return result;
 }
 
 

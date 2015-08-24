@@ -36,7 +36,7 @@ int parsingContours(cv::Mat hsv,
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 
-void counter_person_flow(int object_index, bool direction);
+int counter_person_flow(int object_index, bool direction);
 
 extern bool with_gui;
 
