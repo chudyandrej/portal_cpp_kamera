@@ -10,7 +10,7 @@ int learning_history = 1000;
 int thresholding = 1300;
 int min_area = 1500;
 int min_dist_to_create = 20;
-double max_dist_to_pars = 80;
+double max_dist_to_pars = 200;
 double shadow_thresh = 0.7;
 int frame_width = 320;
 int frame_height = 240;
@@ -51,6 +51,8 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
     if(with_fps) {
         printf("FPS ticks : %f\n", (float) 1 / dT);
     }
+    cv::Mat hsv;
+    cvtColor(*frame, hsv, CV_BGR2HSV);
 
     cv::erode(*fg_mask, *fg_mask, cv::Mat(), cv::Point(-1, -1), 5);
     cv::dilate(*fg_mask, *fg_mask, cv::Mat(), cv::Point(-1, -1), 8);
@@ -65,6 +67,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
     vector<cv::Rect> objectsBox;
 
 
+
     for (size_t i = 0; i < contours.size(); i++) {
         cv::Rect bBox;
         bBox = cv::boundingRect(contours[i]);
@@ -76,11 +79,11 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
     }
 
     for (size_t i = 0; i < tracked_objects.size(); i++) {
-        int contourID = parsingContours(objects,objectsBox, tracked_objects[i].get_kalman_x_pos(),
-                                        tracked_objects[i].get_kalman_y_pos(),max_dist_to_pars);
+        int contourID = parsingContours(hsv, objects,objectsBox, tracked_objects[i].get_kalman_x_pos(),
+                                        tracked_objects[i].get_kalman_y_pos(),max_dist_to_pars, tracked_objects[i].hist());
         if (contourID == -1 || (tracked_objects[i].counter() < 14)){
-            contourID = parsingContours(objects,objectsBox, tracked_objects[i].last_x_pos(),
-                                        tracked_objects[i].last_y_pos(),max_dist_to_pars);
+            contourID = parsingContours(hsv, objects,objectsBox, tracked_objects[i].last_x_pos(),
+                                        tracked_objects[i].last_y_pos(),max_dist_to_pars,tracked_objects[i].hist());
             if(contourID == -1) {
                 if (tracked_objects[i].counter() < 2) {
                     tracked_objects.erase(tracked_objects.begin() + i);
@@ -91,7 +94,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                               tracked_objects[i].last_y_pos() < frame_height / 6)) {
 
                             cv::Rect objectsBoxKalman;
-                            tracked_objects[i].kalmanMakeCalculate(*frame, objectsBoxKalman, false, dT);
+                            tracked_objects[i].kalmanMakeCalculate(*frame,  dT);
                         }
                         else {
                              counter_person_flow((int) i, person_flow);
@@ -103,7 +106,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                               tracked_objects[i].last_x_pos() < frame_width / 6)) {
 
                             cv::Rect objectsBoxKalman;
-                            tracked_objects[i].kalmanMakeCalculate(*frame, objectsBoxKalman, false, dT);
+                            tracked_objects[i].kalmanMakeCalculate(*frame, dT);
                         }
                         else {
                             counter_person_flow((int) i, person_flow);
@@ -118,14 +121,15 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
             }
             else {
 
-                tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], true, dT);
+                cv::MatND hist = CalcHistogramBase(hsv, objects, contourID, tracked_objects[i].hist());
+                tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], dT, hist);
                 objectsBox.erase (objectsBox.begin()+ contourID);
                 objects.erase (objects.begin()+ contourID);
             }
         }
         else{
-
-            tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], true, dT);
+            cv::MatND hist = CalcHistogramBase(hsv, objects, contourID, tracked_objects[i].hist());
+            tracked_objects[i].kalmanMakeCalculate(*frame, objectsBox[contourID], dT, hist);
             objectsBox.erase (objectsBox.begin()+ contourID);
             objects.erase (objects.begin()+ contourID);
         }
@@ -150,8 +154,8 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
             newObject.set_startingYpos(objectsBox[i].y + objectsBox[i].height / 2);
             newObject.set_startingXpos(objectsBox[i].x + objectsBox[i].width / 2);
 
-
-            newObject.kalmanMakeCalculate(*frame, objectsBox[i], true, dT);
+            cv::MatND hist = CalcHistogramContour(hsv, objects, i);
+            newObject.kalmanMakeCalculate(*frame, objectsBox[i], dT, hist);
             
             tracked_objects.push_back(newObject);
             id++;
@@ -199,18 +203,99 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
 
 }
 
-int parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max) {
+
+MatND CalcHistogramContour(cv::Mat hsv, vector<vector<cv::Point>> contour, int i) {
+        // Quantize the hue to 30 levels
+    // and the saturation to 32 levels
+    int hbins = 30, sbins = 32;
+    int histSize[] = {hbins, sbins};
+    // hue varies from 0 to 179, see cvtColor
+    float hranges[] = { 0, 180 };
+    // saturation varies from 0 (black-gray-white) to
+    // 255 (pure spectrum color)
+    float sranges[] = { 0, 256 };
+    const float* ranges[] = { hranges, sranges };
+    MatND hist;
+    // we compute the histogram from the 0-th and 1-st channels
+    int channels[] = {0, 1};
+
+
+    Mat mask = Mat::zeros(hsv.size(), CV_8UC1);
+
+    drawContours(mask, contour, i, Scalar(255), CV_FILLED);
+    calcHist( &hsv, 1, channels, mask, // do not use mask
+             hist, 2, histSize, ranges,
+             true, // the histogram is uniform
+             false );
+    normalize( hist, hist, 0, 1, NORM_MINMAX, -1, Mat() );
+    return hist;
+}
+
+MatND CalcHistogramBase(cv::Mat hsv, vector<vector<cv::Point>> contour, int i, MatND hist) {
+        // Quantize the hue to 30 levels
+    // and the saturation to 32 levels
+    int hbins = 30, sbins = 32;
+    int histSize[] = {hbins, sbins};
+    // hue varies from 0 to 179, see cvtColor
+    float hranges[] = { 0, 180 };
+    // saturation varies from 0 (black-gray-white) to
+    // 255 (pure spectrum color)
+    float sranges[] = { 0, 256 };
+    const float* ranges[] = { hranges, sranges };
+
+    // we compute the histogram from the 0-th and 1-st channels
+    int channels[] = {0, 1};
+
+
+    Mat mask = Mat::zeros(hsv.size(), CV_8UC1);
+
+    drawContours(mask, contour, i, Scalar(255), CV_FILLED);
+    calcHist( &hsv, 1, channels, mask, // do not use mask
+             hist, 2, histSize, ranges,
+             true, // the histogram is uniform
+             true );
+    normalize( hist, hist, 0, 1, NORM_MINMAX, -1, Mat() );
+    return hist;
+}
+
+
+int parsingContours(cv::Mat hsv,
+        vector<vector<cv::Point>> &objects,
+        vector<cv::Rect> &objectsBox, 
+        float x,
+        float y, 
+        double max, 
+        MatND hist_base) {
+
     double distance;
     int r = -1;
-    for (int i = 0; i < objects.size(); i++) {
-        distance = CalcDistance(x, objectsBox[i].x + objectsBox[i].width / 2, y, objectsBox[i].y + objectsBox[i].height / 2);
+        // Histogram stuff
+    
 
-        if (max > distance) {
-            max = distance;
-            r = i;
+    double best_match_result = 0;
+    double best_match_id = -1;
+    for (int i = 0; i < objects.size(); i++) {
+        distance = CalcDistance(x, objectsBox[i].x + objectsBox[i].width / 2,
+            y, objectsBox[i].y + objectsBox[i].height / 2);
+
+        
+        if (distance < max) {
+            MatND hist_new = CalcHistogramContour(hsv, objects, i);
+        
+            double result = compareHist( hist_base, hist_new, 0 );
+            if (result > best_match_result) {
+                best_match_id = i;
+                best_match_result = result;
+            }
         }
+
+
+        
+        
+
+        
     }
-    return  r;
+    return  best_match_id;
 }
 
 double CalcDistance(float x1, float x2, float y1, float y2){

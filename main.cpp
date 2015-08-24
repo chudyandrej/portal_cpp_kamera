@@ -25,7 +25,7 @@ typedef struct {
     double tick;
 } frame_wrap_t;
 
-int delay = 0;
+int delay = 200000;
 bool with_gui = false;
 bool with_fps = false;
 bool end_while = true;
@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
     init();
-    cap = init_cap_bg("/home/andrej/Music/video3/pi_video3.mkv");
+    cap = init_cap_bg("/home/jancio/Desktop/video.mkv");
 
     std::thread cv(openCV);
     std::thread thread1(BG_thread1);
@@ -94,6 +94,7 @@ void openCV() {
             printf("WTF ???");
         }
         if(with_gui) {
+
             waitKey(1);
         }
     }

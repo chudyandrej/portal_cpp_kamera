@@ -23,7 +23,16 @@ void BgSubtractor(cv::Mat *frame, cv::Mat *fg_mask);
 
 double CalcDistance(float x_1, float x_2, float y_1, float y_2);
 
-int  parsingContours(vector<vector<cv::Point>> &objects,vector<cv::Rect> &objectsBox, float x,float y,  double max);
+MatND CalcHistogramContour(cv::Mat hsv, vector<vector<cv::Point>> contour, int i);
+MatND CalcHistogramBase(cv::Mat hsv, vector<vector<cv::Point>> contour, int i, MatND hist);
+
+int parsingContours(cv::Mat hsv,
+        vector<vector<cv::Point>> &objects,
+        vector<cv::Rect> &objectsBox, 
+        float x,
+        float y, 
+        double max, 
+        MatND hist_base);
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 

@@ -17,9 +17,10 @@ public:
 
     kalmanCont();
 
-    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox,bool object_on_frame,double dT);
+    int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox, double dT, cv::MatND hist);
+    int kalmanMakeCalculate(cv::Mat res, double dT);
 
-
+    void kalmanSaveData(cv::Mat res, double dT);
     void add_usingRate();
 
     void set_startingYpos(int y_set);
@@ -53,7 +54,7 @@ public:
     cv::Rect objectsBoxCopy;
 
     int R,G,B;
-
+    cv::MatND hist() const;
 
 
 private:
@@ -64,7 +65,7 @@ private:
     int object_area_;
     bool first_start;
     float x,y, last_x_pos_, last_y_pos_;
-
+    cv::MatND hist_;
 
 };
 

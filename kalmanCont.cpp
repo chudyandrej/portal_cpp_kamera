@@ -39,27 +39,7 @@ kalmanCont::kalmanCont() {
     cv::setIdentity(kf.measurementNoiseCov, cv::Scalar(1e-1));
 }
 
-int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object_frame, double dT) {
-    objectsBoxCopy = objectsBox;
-
-    object_area_ = objectsBox.area();
-
-    if (object_frame) {
-        using_rate_ = 0;
-        last_x_pos_ = objectsBox.x + objectsBox.width / 2;
-        last_y_pos_ = objectsBox.y + objectsBox.height / 2;
-
-        meas.at<float>(0) = last_x_pos_;                      //center x
-        meas.at<float>(1) = last_y_pos_;                  //center y
-        meas.at<float>(2) = (float) objectsBox.width;                   //dlzka
-        meas.at<float>(3) = (float) objectsBox.height;                  //vyska
-    }
-    else {
-        meas.at<float>(0) = x;                                          //center x
-        meas.at<float>(1) = y;                                          //center y
-        meas.at<float>(2) = 50;                   //dlzka
-        meas.at<float>(3) = 50;                  //vyska
-    }
+void kalmanCont::kalmanSaveData(cv::Mat res, double dT) {
     if (!first_start){
         kf.errorCovPre.at<float>(0) = 1; // px
         kf.errorCovPre.at<float>(7) = 1; // px
@@ -97,8 +77,7 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object
         center.y = 0;
     if (center.y >= frame_height)
         center.y = frame_height;
-
-    cv::Rect predRect;
+        cv::Rect predRect;
     predRect.width = (int) state.at<float>(4);
     predRect.height = (int) state.at<float>(5);
     predRect.x = state.at<float>(0) - predRect.width / 2;
@@ -110,7 +89,46 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res,cv::Rect objectsBox, bool object
     x = center.x;
     y = center.y;
 
-    return id_;
+}
+
+int kalmanCont::kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox, double dT, cv::MatND hist) {
+    hist_ = hist;
+    objectsBoxCopy = objectsBox;
+
+    object_area_ = objectsBox.area();
+
+
+    using_rate_ = 0;
+    last_x_pos_ = objectsBox.x + objectsBox.width / 2;
+    last_y_pos_ = objectsBox.y + objectsBox.height / 2;
+
+
+    meas.at<float>(0) = last_x_pos_;                      //center x
+    meas.at<float>(1) = last_y_pos_;                  //center y
+    meas.at<float>(2) = (float) objectsBox.width;                   //dlzka
+    meas.at<float>(3) = (float) objectsBox.height;                  //vyska
+    
+
+    kalmanSaveData(res, dT);
+    return 0;
+}
+
+int kalmanCont::kalmanMakeCalculate(cv::Mat res, double dT) {
+
+
+
+    meas.at<float>(0) = x;                                          //center x
+    meas.at<float>(1) = y;                                          //center y
+    meas.at<float>(2) = 50;                   //dlzka
+    meas.at<float>(3) = 50;                  //vyska
+    
+
+    kalmanSaveData(res, dT);
+    return 0;
+}
+
+cv::MatND kalmanCont::hist() const {
+    return hist_;
 }
 
 float kalmanCont::get_kalman_x_pos() const {
