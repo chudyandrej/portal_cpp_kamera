@@ -34,6 +34,10 @@ int parsingContours(cv::Mat hsv,
         double max, 
         MatND hist_base);
 
+double nearConture(vector<vector<cv::Point>> &objects, vector<cv::Rect> &objectsBox,float x, float y);
+
+bool comp(kalmanCont a,kalmanCont b);
+
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 
 int counter_person_flow(int object_index, bool direction);

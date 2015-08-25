@@ -4,12 +4,17 @@
 
 #ifndef PORTALS_KALMANCONT_H
 #define PORTALS_KALMANCONT_H
-
+#include <queue>
 #include <opencv2/video/tracking.hpp>
 #include <iostream>
 
-
 extern bool with_fps;
+
+typedef struct {
+    double x;
+    double y;
+    double t;
+} position_t;
 
 class kalmanCont {
 
@@ -18,12 +23,15 @@ public:
     kalmanCont();
 
     int kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox, double dT, cv::MatND hist);
+
     int kalmanMakeCalculate(cv::Mat res, double dT);
 
-    void kalmanSaveData(cv::Mat res, double dT);
+    void kalmanSaveData(position_t pos, cv::Mat res, double dT);
+
     void add_usingRate();
 
     void set_startingYpos(int y_set);
+
     void set_startingXpos(int x_set);
 
     int get_usingRate() const ;
@@ -43,31 +51,32 @@ public:
     void set_counter();
 
     int counter() const ;
-   
 
     void set_id(int id_new);
 
     int id() const;
-    
-    int object_area() const;
-    
+
+    double distance_from_conture() const;
+
+    void set_distance_from_conture(double value);
+
+
+
     cv::Rect objectsBoxCopy;
 
     int R,G,B;
+
     cv::MatND hist() const;
 
-
 private:
-    cv::KalmanFilter kf;
-    cv::Mat meas;
-    cv::Mat state;
+
     int using_rate_, starting_y_pos_ = 0 , starting_x_pos_ = 0, counter_ = 0, id_;
     int object_area_;
-    bool first_start;
     float x,y, last_x_pos_, last_y_pos_;
     cv::MatND hist_;
+    std::queue<position_t> history_;
+    double time_since_start_, distance_from_conture_;
+
 
 };
-
-
 #endif //PORTALS_KALMANCONT_H

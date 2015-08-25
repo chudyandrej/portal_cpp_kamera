@@ -9,8 +9,8 @@
 int learning_history = 1000;
 int thresholding = 1300;
 int min_area = 1800;
-int min_dist_to_create = 20;
-double max_dist_to_pars = 100;
+int min_dist_to_create = 60;
+double max_dist_to_pars = 60;
 double shadow_thresh = 0.7;
 int frame_width = 320;
 int frame_height = 240;
@@ -78,10 +78,19 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         }
     }
 
+    for (size_t s = 0; s < tracked_objects.size(); s++) {
+        double dist = nearConture(objects,
+                                  objectsBox,
+                                  tracked_objects[s].get_kalman_x_pos(),
+                                  tracked_objects[s].get_kalman_y_pos());
+        tracked_objects[s].set_distance_from_conture(dist);
+    }
+    std::sort(tracked_objects.begin(),tracked_objects.end(),comp);
+
     for (size_t i = 0; i < tracked_objects.size(); i++) {
         int contourID = parsingContours(hsv, objects,objectsBox, tracked_objects[i].get_kalman_x_pos(),
                                         tracked_objects[i].get_kalman_y_pos(),max_dist_to_pars, tracked_objects[i].hist());
-        if (contourID == -1 || (tracked_objects[i].counter() < 5)){
+        if (contourID == -1 || (tracked_objects[i].counter() < 2)){
             contourID = parsingContours(hsv, objects,objectsBox, tracked_objects[i].last_x_pos(),
                                         tracked_objects[i].last_y_pos(),max_dist_to_pars,tracked_objects[i].hist());
             if(contourID == -1) {
@@ -89,26 +98,13 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                     tracked_objects.erase(tracked_objects.begin() + i);
                 }
                 else {
-                    if (person_flow == upDown) {
-                        if (!(tracked_objects[i].last_y_pos() > frame_height - frame_height / 6 ||
-                                tracked_objects[i].last_y_pos() < frame_height / 6) ) {
-                            tracked_objects[i].kalmanMakeCalculate(*frame,  dT);
-                        }
-                        else {
-                             counter_person_flow((int) i, person_flow);
-                             tracked_objects.erase(tracked_objects.begin() + i);
-                        }
+                    if (!(tracked_objects[i].last_x_pos() > frame_width - frame_width / 6 ||
+                          tracked_objects[i].last_x_pos() < frame_width / 6)) {
+                        tracked_objects[i].kalmanMakeCalculate(*frame, dT);
                     }
                     else {
-
-                        if (!(tracked_objects[i].last_x_pos() > frame_width - frame_width / 6 ||
-                              tracked_objects[i].last_x_pos() < frame_width / 6)) {
-                            tracked_objects[i].kalmanMakeCalculate(*frame, dT);
-                        }
-                        else {
-                            counter_person_flow((int) i, person_flow);
-                            tracked_objects.erase(tracked_objects.begin() + i);
-                        }
+                        counter_person_flow((int) i, person_flow);
+                        tracked_objects.erase(tracked_objects.begin() + i);
                     }
                 }
                 if (tracked_objects[i].get_usingRate() > 30) {
@@ -284,7 +280,7 @@ int parsingContours(cv::Mat hsv,
         if (distance < max) {
             MatND hist_new = CalcHistogramContour(hsv, objects, i);
         
-            double result = distance - compareHist( hist_base, hist_new, 0 ) * 10;
+            double result = distance - compareHist( hist_base, hist_new, 0 ) * 0;
             if (result < best_match_result) {
                 best_match_id = i;
                 best_match_result = result;
@@ -324,6 +320,7 @@ int counter_person_flow(int object_index , bool direction){
         if (abs(distance) > frame_size / 2) {
             in++;
             result = 0;
+
           //  std::thread(send_transaction,"in").detach();
         }
     }
@@ -338,6 +335,27 @@ int counter_person_flow(int object_index , bool direction){
 }
 
 
+double nearConture(vector<vector<cv::Point>> &objects, vector<cv::Rect> &objectsBox,float x, float y) {
+    double max = max_dist_to_pars;
+    double distance;
+    double best_match_result = 0;
+
+    for (int i = 0; i < objects.size(); i++) {
+        distance = CalcDistance(x, objectsBox[i].x + objectsBox[i].width / 2, y, objectsBox[i].y + objectsBox[i].height / 2);
+
+        if (distance < max) {
+            best_match_result = distance;
+            max = best_match_result;
+        }
+    }
+    return best_match_result;
+}
+
+bool comp(kalmanCont a,kalmanCont b){
+
+    return a.distance_from_conture() > b.distance_from_conture();
+
+}
 
 
 

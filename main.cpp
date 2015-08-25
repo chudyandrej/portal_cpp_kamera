@@ -50,7 +50,7 @@ int main(int argc, char *argv[]) {
     signal(SIGTERM, contro_c);
     signal(SIGINT, contro_c);
     init();
-    cap = init_cap_bg("/home/jancio/Desktop/video.mkv");
+    cap = init_cap_bg("/home/andrej/Music/colisions/video.mkv");
 
     std::thread cv(openCV);
     std::thread thread1(BG_thread1);
@@ -147,9 +147,9 @@ void BG_thread2() {
         frame2->tick = (double) cv::getTickCount();
 
         BgSubtractor(&(frame2->frame), &(frame2->fg_mask));
+
         sem_wait(push_m_2);
         sem_wait(write_to_list);
-
         frames.push(frame2);
         sem_post(write_to_list);
         sem_post(data_flow);
@@ -174,11 +174,11 @@ void BG_thread3() {
         usleep((__useconds_t) delay);
         sem_post(cap_m_1);
         frame3->tick = (double) cv::getTickCount();
+
         BgSubtractor(&(frame3->frame), &(frame3->fg_mask));
        
         sem_wait(push_m_3);
         sem_wait(write_to_list);
-
         frames.push(frame3);
         sem_post(write_to_list);
         sem_post(data_flow);
