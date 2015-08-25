@@ -274,7 +274,7 @@ int parsingContours(cv::Mat hsv,
         // Histogram stuff
     
 
-    double best_match_result = 0;
+    double best_match_result = 1000;
     int best_match_id = -1;
     for (int i = 0; i < objects.size(); i++) {
         distance = CalcDistance(x, objectsBox[i].x + objectsBox[i].width / 2,
@@ -284,8 +284,8 @@ int parsingContours(cv::Mat hsv,
         if (distance < max) {
             MatND hist_new = CalcHistogramContour(hsv, objects, i);
         
-            double result = compareHist( hist_base, hist_new, 0 );
-            if (result > best_match_result) {
+            double result = distance - compareHist( hist_base, hist_new, 0 ) * 10;
+            if (result < best_match_result) {
                 best_match_id = i;
                 best_match_result = result;
             }
