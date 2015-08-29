@@ -92,7 +92,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         tracked_objects[i].set_index_object((int) i);
         if (tracked_objects[i].selected_counture.size() >= 1){                           //ak má objekt v okolí nejaké kontúry
             found_contures[tracked_objects[i].selected_counture[0].ID].candidate_object.push_back(tracked_objects[i]);    //pushne do contúry svoje ID
-        }
+        }gir
     }
     for (size_t i = 0; i < tracked_objects.size(); i++) {
 
