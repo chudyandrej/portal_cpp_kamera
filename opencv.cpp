@@ -48,7 +48,7 @@ void BgSubtractor(cv::Mat *frame, cv::Mat *fg_mask) {
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
 
-    double dT =  ((tick - prev_tick ) / cv::getTickFrequency()); //seconds
+    double dT = ((tick - prev_tick ) / cv::getTickFrequency()); //seconds
     prev_tick = tick;
     if(with_fps) {
         printf("FPS ticks : %f\n", (float) 1 / dT);
@@ -87,13 +87,15 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
 
     loadValidCounureToObject(found_contures, tracked_objects);                             //načítanie všetkých vzdialeností od kontur a usporiadanie
 
+    std::sort(tracked_objects.begin(),tracked_objects.end(),comp);
     for (size_t i = 0; i < tracked_objects.size(); i++) {
+        tracked_objects[i].set_index_object((int) i);
         if (tracked_objects[i].selected_counture.size() >= 1){                           //ak má objekt v okolí nejaké kontúry
             found_contures[tracked_objects[i].selected_counture[0].ID].candidate_object.push_back(tracked_objects[i]);    //pushne do contúry svoje ID
         }
     }
-
     for (size_t i = 0; i < tracked_objects.size(); i++) {
+
 
         int contourID = parsingContours(found_contures, tracked_objects[i]);
 
@@ -234,7 +236,7 @@ void loadValidCounureToObject(vector<contour_t> &found_contures, vector<kalmanCo
             }
         }
         tracked_object[k].sort_conture_low_high();
-        tracked_object[k].set_index_object((int) k);
+
     }
 }
 
@@ -291,6 +293,7 @@ int counterAbsPersonFlow(int object_index){
     return result;
 }
 
-
-
+bool comp(kalmanCont a,kalmanCont b){
+    return a.distance_nearest_counture() < b.distance_nearest_counture();
+}
 

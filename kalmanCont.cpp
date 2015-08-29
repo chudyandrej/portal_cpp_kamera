@@ -136,20 +136,24 @@ void kalmanCont::push_selected_conture(int id, double distance) {
 }
 
 void kalmanCont::sort_conture_low_high() {
-     std::sort(selected_counture.begin(), selected_counture.end(), less_than_distance_cont());
-    printf("ID:%d",id_);
+    std::sort(selected_counture.begin(), selected_counture.end(), less_than_distance_cont());
+    /*printf("ID:%d",id_);
     for (int i = 0; i < selected_counture.size(); i++) {
         printf(" %f ", selected_counture[i].distance_cont);
     }
-    printf("\n");
+    printf("\n");*/
 }
-
 void kalmanCont::clear_history_frams() {
     selected_counture.clear();
 }
 
 double kalmanCont::distance_nearest_counture() const {
+    if (selected_counture.size() != 0) {
         return selected_counture[0].distance_cont;
+    }
+    else {
+        return 500;
+    }
 
 }
 

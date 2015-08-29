@@ -35,7 +35,7 @@ double CalcDistance(double x_1, double x_2, double y_1, double y_2);
 
 int parsingContours(vector<contour_t> &found_contures, kalmanCont &tracked_object);
 
-
+bool comp(kalmanCont a,kalmanCont b);
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 
