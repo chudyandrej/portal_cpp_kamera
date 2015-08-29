@@ -8,7 +8,6 @@
 
 kalmanCont::kalmanCont() {
 
-
     using_rate_ = 0;
 
     R = rand() % 255;
@@ -16,48 +15,39 @@ kalmanCont::kalmanCont() {
     B = rand() % 255;
 }
 
-void kalmanCont::kalmanSaveData(position_t pos, cv::Mat res, double dT) {
+void kalmanCont::kalmanSaveData(predict_position_t pos, cv::Mat res, double dT) {
 
     history_.push(pos);
 
     time_since_start_ += dT;
-    if (history_.size() >= 100) {
-        //printf("%d, %d\n",history_.back().y,history_.front().y);
+    //printf("%d \n",(int)history_.size());
+    if (history_.size() >= 20) {
+
         time_since_start_ -= history_.front().t;
         history_.pop();
     }
+    kalman_pred_x = history_.back().x;
+    kalman_pred_y = history_.back().y;
+
 
     cv::Point center;
-    center.x = (int) history_.back().x;
-    center.y = (int) history_.back().y;
+    center.x = (int) kalman_pred_x;
+    center.y = (int) kalman_pred_y;
+    cv::circle(res, center, 5, CV_RGB(R,G,B), -1);
+    cv::circle(res, center, 50, CV_RGB(R,G,B), 0);
 
-    if (center.x <= 0)
-        center.x = 0;
-    if (center.x >= frame_width)
-        center.x = frame_width;
-    if (center.y <= 0)
-        center.y = 0;
-    if (center.y >= frame_height)
-        center.y = frame_height;
-
-    cv::circle(res, center, 10, CV_RGB(R,G,B), -1);
-    x = center.x;
-    y = center.y;
 }
 
-int kalmanCont::kalmanMakeCalculate(cv::Mat res, cv::Rect objectsBox, double dT, cv::MatND hist) {
+int kalmanCont::kalmanMakeCalculate(cv::Mat res, cv::Moments mu, double dT, cv::MatND hist) {
     hist_ = hist;
-    objectsBoxCopy = objectsBox;
-
-    object_area_ = objectsBox.area();
 
 
     using_rate_ = 0;
-    last_x_pos_ = objectsBox.x + objectsBox.width / 2;
-    last_y_pos_ = objectsBox.y + objectsBox.height / 2;
+    last_x_pos_ = mu.m10/mu.m00;
+    last_y_pos_ = mu.m01/mu.m00;
 
-    position_t pos;
-    pos.x =  last_x_pos_;
+    predict_position_t pos;
+    pos.x = last_x_pos_;
     pos.y = last_y_pos_;
     pos.t = dT;
 
@@ -69,7 +59,7 @@ int kalmanCont::kalmanMakeCalculate(cv::Mat res, double dT) {
     double v_x = ((history_.back().x - history_.front().x) / time_since_start_);
     double v_y = ((history_.back().y - history_.front().y) / time_since_start_);
 
-    position_t pos;
+    predict_position_t pos;
     pos.x =  (history_.back().x + dT * v_x);
     pos.y =  (history_.back().y + dT * v_y);
     pos.t = dT;
@@ -82,19 +72,19 @@ cv::MatND kalmanCont::hist() const {
     return hist_;
 }
 
-float kalmanCont::get_kalman_x_pos() const {
-    return x;
+double kalmanCont::get_kalman_x_pos() const {
+    return kalman_pred_x;
 }
 
-float kalmanCont::get_kalman_y_pos() const {
-    return y;
+double kalmanCont::get_kalman_y_pos() const {
+    return kalman_pred_y;
 }
 
-float kalmanCont::last_x_pos() const {
+double kalmanCont::last_x_pos() const {
     return last_x_pos_;
 }
 
-float kalmanCont::last_y_pos() const {
+double kalmanCont::last_y_pos() const {
     return last_y_pos_;
 }
 
@@ -106,16 +96,16 @@ int kalmanCont::get_usingRate() const {
     return using_rate_;
 }
 
-int kalmanCont::starting_y_pos() const {
+double kalmanCont::starting_y_pos() const {
     return starting_y_pos_;
 }
-int kalmanCont::starting_x_pos() const {
+double kalmanCont::starting_x_pos() const {
     return starting_x_pos_;
 }
-void kalmanCont::set_startingYpos(int y_set) {
+void kalmanCont::set_startingYpos(double y_set) {
     starting_y_pos_ = y_set;
 }
-void kalmanCont::set_startingXpos(int x_set) {
+void kalmanCont::set_startingXpos(double x_set) {
     starting_x_pos_ = x_set;
 }
 
@@ -138,11 +128,53 @@ void kalmanCont::set_id(int id_new) {
 }
 
 
-double kalmanCont::distance_from_conture() const {
-    return distance_from_conture_;
+
+void kalmanCont::push_selected_conture(int id, double distance) {
+
+    selected_counture.push_back(conture_t(id,distance));
+
 }
 
-void kalmanCont::set_distance_from_conture(double value) {
-    distance_from_conture_ = value;
+void kalmanCont::sort_conture_low_high() {
+     std::sort(selected_counture.begin(), selected_counture.end(), less_than_distance_cont());
+    printf("ID:%d",id_);
+    for (int i = 0; i < selected_counture.size(); i++) {
+        printf(" %f ", selected_counture[i].distance_cont);
+    }
+    printf("\n");
+}
 
+void kalmanCont::clear_history_frams() {
+    selected_counture.clear();
+}
+
+double kalmanCont::distance_nearest_counture() const {
+        return selected_counture[0].distance_cont;
+
+}
+
+double kalmanCont::distance_second_nearest_counture() const {
+    if(selected_counture.size() >= 2) {
+        return selected_counture[1].distance_cont;
+    }
+    else{
+        return -1;
+    }
+}
+
+int kalmanCont::index_object() const {
+    return index_object_;
+}
+
+void kalmanCont::set_index_object(int index) {
+    index_object_ = index;
+}
+
+
+void kalmanCont::set_change_startin_pos(bool value) {
+    change_startin_pos_ = value;
+}
+
+bool kalmanCont::change_startin_pos() const {
+    return change_startin_pos_;
 }

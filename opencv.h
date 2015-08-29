@@ -17,34 +17,38 @@
 using namespace cv;
 using namespace std;
 
+typedef struct {
+        int id;
+        double distance;
+        vector<cv::Point> contours;
+        cv::Moments mu;
+        vector<kalmanCont> candidate_object;
+        int selected_object;
+        bool contour_use;
+} contour_t;
+
 cv::VideoCapture init_cap_bg(const char *url);
 
 void BgSubtractor(cv::Mat *frame, cv::Mat *fg_mask);
 
-double CalcDistance(float x_1, float x_2, float y_1, float y_2);
+double CalcDistance(double x_1, double x_2, double y_1, double y_2);
 
-MatND CalcHistogramContour(cv::Mat hsv, vector<vector<cv::Point>> contour, int i);
-MatND CalcHistogramBase(cv::Mat hsv, vector<vector<cv::Point>> contour, int i, MatND hist);
+int parsingContours(vector<contour_t> &found_contures, kalmanCont &tracked_object);
 
-int parsingContours(cv::Mat hsv,
-        vector<vector<cv::Point>> &objects,
-        vector<cv::Rect> &objectsBox, 
-        float x,
-        float y, 
-        double max, 
-        MatND hist_base);
 
-double nearConture(vector<vector<cv::Point>> &objects, vector<cv::Rect> &objectsBox,float x, float y);
-
-bool comp(kalmanCont a,kalmanCont b);
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 
-int counter_person_flow(int object_index, bool direction);
+int counterAbsPersonFlow(int object_index);
 
+void loadValidCounureToObject(vector<contour_t> &found_contures, vector<kalmanCont> &tracked_object);
+
+void selectContourObject (vector<contour_t> &found_contures, vector<kalmanCont> &tracked_object);
+
+bool comp(kalmanCont a,kalmanCont b);
 extern bool with_gui;
 
-extern bool person_flow;
+
 
 
 

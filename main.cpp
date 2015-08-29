@@ -25,7 +25,7 @@ typedef struct {
     double tick;
 } frame_wrap_t;
 
-int delay = 50000;
+int delay = 100000;
 bool with_gui = false;
 bool with_fps = false;
 bool end_while = true;
