@@ -11,9 +11,7 @@
     </ADDITIONAL_GENERATION_ENVIRONMENT>
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="54d36ecf-9714-482b-a436-7b9e1fe21166" name="Default" comment="version for raspi">
-      <change type="MODIFICATION" beforePath="$PROJECT_DIR$/opencv.cpp" afterPath="$PROJECT_DIR$/opencv.cpp" />
-    </list>
+    <list default="true" id="54d36ecf-9714-482b-a436-7b9e1fe21166" name="Default" comment="version for raspi" />
     <ignored path="portals.iws" />
     <ignored path=".idea/workspace.xml" />
     <option name="EXCLUDED_CONVERTED_TO_IGNORED" value="true" />
@@ -46,8 +44,8 @@
       <file leaf-file-name="opencv.cpp" pinned="false" current-in-tab="true">
         <entry file="file://$PROJECT_DIR$/opencv.cpp">
           <provider selected="true" editor-type-id="text-editor">
-            <state vertical-scroll-proportion="0.84375">
-              <caret line="94" column="12" selection-start-line="94" selection-start-column="12" selection-end-line="94" selection-end-column="12" />
+            <state vertical-scroll-proportion="0.9375">
+              <caret line="84" column="9" selection-start-line="84" selection-start-column="9" selection-end-line="84" selection-end-column="9" />
               <folding />
             </state>
           </provider>
@@ -690,8 +688,8 @@
     </entry>
     <entry file="file://$PROJECT_DIR$/opencv.cpp">
       <provider selected="true" editor-type-id="text-editor">
-        <state vertical-scroll-proportion="0.84375">
-          <caret line="94" column="12" selection-start-line="94" selection-start-column="12" selection-end-line="94" selection-end-column="12" />
+        <state vertical-scroll-proportion="0.9375">
+          <caret line="84" column="9" selection-start-line="84" selection-start-column="9" selection-end-line="84" selection-end-column="9" />
           <folding />
         </state>
       </provider>
