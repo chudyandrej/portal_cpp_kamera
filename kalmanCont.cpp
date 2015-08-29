@@ -26,9 +26,23 @@ void kalmanCont::kalmanSaveData(predict_position_t pos, cv::Mat res, double dT) 
         time_since_start_ -= history_.front().t;
         history_.pop();
     }
+
     kalman_pred_x = history_.back().x;
     kalman_pred_y = history_.back().y;
 
+    if (kalman_pred_x <= 0) {
+        kalman_pred_x = 0;
+    }
+    if (kalman_pred_x >= frame_width) {
+        kalman_pred_x = frame_width;
+    }
+   /* if (kalman_pred_y <= 0) {
+        kalman_pred_y = 0;
+    }
+    if (kalman_pred_x >= frame_height) {
+        kalman_pred_x = frame_height;
+    }
+*/
 
     cv::Point center;
     center.x = (int) kalman_pred_x;
@@ -38,13 +52,13 @@ void kalmanCont::kalmanSaveData(predict_position_t pos, cv::Mat res, double dT) 
 
 }
 
-int kalmanCont::kalmanMakeCalculate(cv::Mat res, cv::Moments mu, double dT, cv::MatND hist) {
+int kalmanCont::kalmanMakeCalculate(cv::Mat res, cv::Rect bBox, double dT, cv::MatND hist) {
     hist_ = hist;
-
+    objectsBoxCopy = bBox;
 
     using_rate_ = 0;
-    last_x_pos_ = mu.m10/mu.m00;
-    last_y_pos_ = mu.m01/mu.m00;
+    last_x_pos_ = bBox.x + bBox.width / 2;
+    last_y_pos_ = bBox.y + bBox.height / 2;
 
     predict_position_t pos;
     pos.x = last_x_pos_;
@@ -136,7 +150,7 @@ void kalmanCont::push_selected_conture(int id, double distance) {
 }
 
 void kalmanCont::sort_conture_low_high() {
-     std::sort(selected_counture.begin(), selected_counture.end(), less_than_distance_cont());
+    std::sort(selected_counture.begin(), selected_counture.end(), less_than_distance_cont());
     printf("ID:%d",id_);
     for (int i = 0; i < selected_counture.size(); i++) {
         printf(" %f ", selected_counture[i].distance_cont);
@@ -149,7 +163,7 @@ void kalmanCont::clear_history_frams() {
 }
 
 double kalmanCont::distance_nearest_counture() const {
-        return selected_counture[0].distance_cont;
+    return selected_counture[0].distance_cont;
 
 }
 

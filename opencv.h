@@ -21,7 +21,7 @@ typedef struct {
         int id;
         double distance;
         vector<cv::Point> contours;
-        cv::Moments mu;
+        cv::Rect bBox;
         vector<kalmanCont> candidate_object;
         int selected_object;
         bool contour_use;
@@ -39,7 +39,7 @@ int parsingContours(vector<contour_t> &found_contures, kalmanCont &tracked_objec
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick);
 
-int counterAbsPersonFlow(int object_index);
+int counterPersonKalPos(int object_index);
 
 void loadValidCounureToObject(vector<contour_t> &found_contures, vector<kalmanCont> &tracked_object);
 

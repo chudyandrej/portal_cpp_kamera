@@ -48,7 +48,7 @@ void BgSubtractor(cv::Mat *frame, cv::Mat *fg_mask) {
 
 int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
 
-    double dT =  ((tick - prev_tick ) / cv::getTickFrequency()); //seconds
+    double dT = 0.05;// ((tick - prev_tick ) / cv::getTickFrequency()); //seconds
     prev_tick = tick;
     if(with_fps) {
         printf("FPS ticks : %f\n", (float) 1 / dT);
@@ -71,14 +71,13 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
 
     for (size_t i = 0; i < contours.size(); i++) {
         cv::Rect bBox;
-        cv::Moments mu;
         bBox = cv::boundingRect(contours[i]);
-        mu = moments( contours[i], false);
+
 
         if (bBox.area() >= min_area) {
             new_contour.id = counter;
             new_contour.contours = contours[i];
-            new_contour.mu = mu;
+            new_contour.bBox = bBox;
             new_contour.contour_use = false;
             counter++;
             found_contures.push_back(new_contour);
@@ -105,20 +104,20 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
             }
             else {
                 if (!(tracked_objects[i].last_y_pos() > frame_height - frame_height / 6 ||
-                        tracked_objects[i].last_y_pos() < frame_height / 6)) {
+                      tracked_objects[i].last_y_pos() < frame_height / 6)) {
                     tracked_objects[i].kalmanMakeCalculate(*frame, dT);
                 }
                 else {
                     if (((tracked_objects[i].starting_y_pos() < frame_height / 2 &&
-                            tracked_objects[i].last_y_pos() <  frame_height / 6 ) ||
-                            (tracked_objects[i].starting_y_pos() > frame_height / 2 &&
-                                    tracked_objects[i].last_y_pos() > frame_height - frame_height / 6)) &&
-                            !(tracked_objects[i].change_startin_pos())) {
+                          tracked_objects[i].last_y_pos() <  frame_height / 6 ) ||
+                         (tracked_objects[i].starting_y_pos() > frame_height / 2 &&
+                          tracked_objects[i].last_y_pos() > frame_height - frame_height / 6)) &&
+                        !(tracked_objects[i].change_startin_pos())) {
 
                         tracked_objects[i].kalmanMakeCalculate(*frame, dT);
                     }
                     else {
-                        counterAbsPersonFlow((int) i);
+                        counterPersonKalPos((int) i);
                         tracked_objects.erase(tracked_objects.begin() + i);
                         i--;
                         continue;
@@ -127,7 +126,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                 }
             }
             if (tracked_objects[i].get_usingRate() > 30) {
-                counterAbsPersonFlow((int) i);
+                counterPersonKalPos((int) i);
                 tracked_objects.erase(tracked_objects.begin() + i);
                 i--;
                 continue;
@@ -136,15 +135,15 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         else{
             found_contures[contourID].contour_use = true;
             cv::MatND hist;// = CalcHistogramBase(hsv, found_contures[contourID].contours, contourID, tracked_objects[i].hist());
-            tracked_objects[i].kalmanMakeCalculate(*frame, found_contures[contourID].mu, dT, hist);
+            tracked_objects[i].kalmanMakeCalculate(*frame, found_contures[contourID].bBox, dT, hist);
             if (tracked_objects[i].starting_y_pos() < frame_height / 2 && tracked_objects[i].last_y_pos() > frame_height - frame_height / 4 ){
-                if (counterAbsPersonFlow((int) i) == 0) {
+                if (counterPersonKalPos((int) i) == 0) {
                     tracked_objects[i].set_startingYpos(frame_height);
                     tracked_objects[i].set_change_startin_pos(true);
                 }
             }
             if (tracked_objects[i].starting_y_pos() > frame_height / 2 && tracked_objects[i].last_y_pos() < frame_height / 4 ){
-                if(counterAbsPersonFlow((int) i) == 0) {
+                if(counterPersonKalPos((int) i) == 0) {
                     tracked_objects[i].set_startingYpos(0);
                     tracked_objects[i].set_change_startin_pos(true);
                 }
@@ -156,8 +155,8 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         if (!found_contures[i].contour_use) {
 
             bool create = true;
-            double x = found_contures[i].mu.m10 / found_contures[i].mu.m00;
-            double y = found_contures[i].mu.m01 / found_contures[i].mu.m00;
+            double x = found_contures[i].bBox.x + found_contures[i].bBox.width / 2;
+            double y = found_contures[i].bBox.y + found_contures[i].bBox.height / 2;
 
 
             for (size_t k = 0; k < tracked_objects.size(); k++) {
@@ -173,7 +172,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
                 newObject.set_startingXpos(x);
 
                 cv::MatND hist;// = CalcHistogramContour(hsv, found_contures[i].contours, (int) i);
-                newObject.kalmanMakeCalculate(*frame, found_contures[i].mu, dT, hist);
+                newObject.kalmanMakeCalculate(*frame, found_contures[i].bBox, dT, hist);
 
                 tracked_objects.push_back(newObject);
                 id++;
@@ -188,6 +187,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         tracked_objects[i].set_counter();
         tracked_objects[i].clear_history_frams();
         if (with_gui) {
+            cv::rectangle(*frame, tracked_objects[i].objectsBoxCopy,CV_RGB(tracked_objects[i].R, tracked_objects[i].G, tracked_objects[i].B), 2);
             cv::Point center;
             center.x = (int) tracked_objects[i].last_x_pos();
             center.y = (int) tracked_objects[i].last_y_pos();
@@ -195,7 +195,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
             stringstream sstr;
             sstr << "Objekt" << tracked_objects[i].id();
             cv::putText(*frame, sstr.str(), cv::Point(center.x + 3, center.y - 3), cv::FONT_HERSHEY_SIMPLEX, 0.5,
-                            CV_RGB(tracked_objects[i].R, tracked_objects[i].G, tracked_objects[i].B), 2);
+                        CV_RGB(tracked_objects[i].R, tracked_objects[i].G, tracked_objects[i].B), 2);
         }
     }
     if (with_gui) {
@@ -211,7 +211,7 @@ int ProcessFrame(cv::Mat *frame, cv::Mat *fg_mask, double tick) {
         cv::imshow("Tracking", *frame);
     }
     if (!with_gui){
-       // printf("in: %d, out: %d\n",in,out);
+        // printf("in: %d, out: %d\n",in,out);
     }
     return 0;
 
@@ -224,9 +224,9 @@ void loadValidCounureToObject(vector<contour_t> &found_contures, vector<kalmanCo
     for (size_t k = 0; k < tracked_objects.size(); k++) {
         for (size_t i = 0; i < found_contures.size(); i++) {
             distance = CalcDistance(tracked_object[k].get_kalman_x_pos(),
-                                    found_contures[i].mu.m10 / found_contures[i].mu.m00,
+                                    found_contures[i].bBox.x + found_contures[i].bBox.width / 2,
                                     tracked_object[k].get_kalman_y_pos(),
-                                    found_contures[i].mu.m01 / found_contures[i].mu.m00);
+                                    found_contures[i].bBox.y + found_contures[i].bBox.height / 2);
 
             if (distance < max) {
                 tracked_object[k].push_selected_conture(found_contures[i].id, distance);
@@ -256,8 +256,8 @@ int parsingContours(vector<contour_t> &found_contures, kalmanCont &tracked_objec
 
 
     for (int i = 0; i < found_contures.size(); i++) {
-        distance = CalcDistance(tracked_object.get_kalman_x_pos(), found_contures[i].mu.m10 / found_contures[i].mu.m00,
-                                tracked_object.get_kalman_y_pos(), found_contures[i].mu.m01 / found_contures[i].mu.m00);
+        distance = CalcDistance(tracked_object.get_kalman_x_pos(), found_contures[i].bBox.x + found_contures[i].bBox.width / 2,
+                                tracked_object.get_kalman_y_pos(), found_contures[i].bBox.y + found_contures[i].bBox.height / 2);
         distance = distance + 20 * found_contures[i].candidate_object.size();
         if (distance < max && !found_contures[i].contour_use) {
             max = distance;
@@ -268,7 +268,7 @@ int parsingContours(vector<contour_t> &found_contures, kalmanCont &tracked_objec
     return  conture_id;
 }
 
-int counterAbsPersonFlow(int object_index){
+int counterPersonKalPos(int object_index){
     double distance;
     int result = -1;
 

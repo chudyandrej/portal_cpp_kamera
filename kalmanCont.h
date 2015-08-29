@@ -34,7 +34,7 @@ public:
 
     kalmanCont();
 
-    int kalmanMakeCalculate(cv::Mat res, cv::Moments mu, double dT, cv::MatND hist);
+    int kalmanMakeCalculate(cv::Mat res, cv::Rect bBox, double dT, cv::MatND hist);
 
     int kalmanMakeCalculate(cv::Mat res, double dT);
 
